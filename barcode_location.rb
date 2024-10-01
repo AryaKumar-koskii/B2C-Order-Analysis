@@ -1,7 +1,25 @@
 require 'csv'
 
 class BarcodeLocation
-  @barcodes_by_location = {}
+  @location_by_barcode = {}
+
+  class << self
+    attr_accessor :location_by_barcode
+
+    def find_by_barcode(barcode)
+      @location_by_barcode[barcode]
+    end
+
+    def all
+      @location_by_barcode
+    end
+
+    def find_barcodes_with_invalid_quantities
+      self.location_by_barcode.values.flatten.select do |barcode_location|
+        barcode_location.quantity > 1 || barcode_location.quantity < 0
+      end
+    end
+  end
 
   attr_accessor :location, :barcode, :product, :quantity
 
@@ -28,13 +46,9 @@ class BarcodeLocation
         row['Quantity'].to_i
       )
 
-      @barcodes_by_location[barcode_location.barcode] ||= []
-      @barcodes_by_location[barcode_location.barcode] << barcode_location
+      self.location_by_barcode[barcode_location.barcode] ||= []
+      self.location_by_barcode[barcode_location.barcode] << barcode_location
     end
-  end
-
-  def self.find_by_barcode(barcode)
-    @barcodes_by_location[barcode]
   end
 
   private

@@ -1,95 +1,130 @@
 require 'csv'
 require_relative 'shipment_line'
+require_relative '../location'
+require_relative '../pending_forward'
 
 class ForwardShipment
-  attr_accessor :location, :forward_order_id, :parent_order_id, :shipment_lines, :return_shipments, :pending
+  attr_accessor :location, :forward_order_id, :parent_order_id, :shipment_lines, :shipment_id, :return_shipments, :pending
 
-  # Static data structures for quick lookup
-  @@forward_shipments_by_id = {}
-  @@forward_shipments_by_barcode = Hash.new { |hash, key| hash[key] = [] }
-  @@forward_shipments_by_sku = Hash.new { |hash, key| hash[key] = [] }
-  @@forward_shipments_without_returns = []
-  @@forward_shipments_by_shipment_id = {}
+  # Class instance variables for quick lookup
+  @forward_shipments_by_parent_id = {}
+  @forward_shipments_by_barcode = Hash.new { |hash, key| hash[key] = [] }
+  @forward_shipments_by_sku = Hash.new { |hash, key| hash[key] = [] }
+  @forward_shipments_without_returns = []
+  @forward_shipments_by_shipment_id = {}
+  @forward_shipments_with_returns = {}
+  @shipment_data_by_parent_order_id_and_sku = {}
 
-  def initialize(location, forward_order_id, parent_order_id, pending=false)
+  class << self
+    attr_accessor :forward_shipments_by_parent_id, :forward_shipments_by_barcode,
+                  :forward_shipments_by_sku, :forward_shipments_without_returns,
+                  :forward_shipments_by_shipment_id, :forward_shipments_with_returns,
+                  :shipment_data_by_parent_order_id_and_sku
+
+    # Class method to read from a CSV file, considering only pending orders
+    def read_from_csv(file_path)
+      CSV.foreach(file_path, headers: true) do |row|
+        forward_order_id = row['Channel Order ID']
+
+        # Only process if the forward order is pending
+        next unless PendingForward.pending?(forward_order_id)
+
+        location_name = row['Fulfilment Location Name'] || row['Fulfillment Location Name']
+        location = Location.find_by_full_name(location_name)
+        unless location
+          puts "Location not found for fulfillment location name: '#{location_name}'"
+          next
+        end
+
+        # Create or retrieve the existing forward shipment
+        parent_order_id = row['Parent Order ID']
+        shipment_id = row['Shipment ID']
+        forward_shipment = self.forward_shipments_by_parent_id[parent_order_id]
+        unless forward_shipment
+          forward_shipment = ForwardShipment.new(location, forward_order_id,
+                                                 parent_order_id,
+                                                 shipment_id,
+                                                 true)
+        end
+
+        # Add shipment line
+        forward_shipment.add_shipment_line(row['Client SKU ID / EAN'], row['External Item Code'])
+
+        # Store data for lookup by parent_order_id and SKU
+        key = [parent_order_id, row['Client SKU ID / EAN']]
+        self.shipment_data_by_parent_order_id_and_sku[key] ||= []
+        self.shipment_data_by_parent_order_id_and_sku[key] << { barcode: row['External Item Code'], shipment_id: shipment_id }
+      end
+
+      def find_by_shipment_id(shipment_id)
+        @forward_shipments_by_shipment_id[shipment_id]
+      end
+
+      def find_by_barcode(barcode)
+        @forward_shipments_by_barcode[barcode]
+      end
+
+      def find_by_sku(sku)
+        @forward_shipments_by_sku[sku]
+      end
+
+      def find_without_return_shipments
+        @forward_shipments_without_returns
+      end
+
+      def find_by_parent_id(parent_id)
+        @forward_shipments_by_parent_id[parent_id]
+      end
+
+      def find_with_return_shipments
+        @forward_shipments_with_returns
+      end
+
+      def all
+        @forward_shipments_by_parent_id.values
+      end
+    end
+
+    # Method to find shipment data by parent order ID and SKU
+    def find_shipment_data(parent_order_id, sku)
+      key = [parent_order_id, sku]
+      self.shipment_data_by_parent_order_id_and_sku[key]
+    end
+  end
+
+  def initialize(location, forward_order_id, parent_order_id, shipment_id, pending = false)
     @location = location
     @forward_order_id = forward_order_id
     @parent_order_id = parent_order_id
-    @shipment_lines = []   # Array of ShipmentLine objects
+    @shipment_id = shipment_id
+    @shipment_lines = [] # Array of ShipmentLine objects
     @return_shipments = [] # Array of associated ReturnShipments
     @pending = pending
 
-    # Populate static data structures
-    @@forward_shipments_by_id[@parent_order_id] = self
-    @@forward_shipments_by_shipment_id[@forward_order_id] = self
-    @@forward_shipments_without_returns << self unless @return_shipments.any?
+    # Populate class instance variables
+    self.class.forward_shipments_by_parent_id[@parent_order_id] = self
+    self.class.forward_shipments_by_shipment_id[@shipment_id] = self
+    self.class.forward_shipments_without_returns << self unless @return_shipments.any?
   end
 
   # Method to add a shipment line (SKU and barcode)
   def add_shipment_line(sku, barcode)
+    # Check for duplicate barcode in the same shipment
     if @shipment_lines.any? { |line| line.barcode == barcode }
-      raise "Duplicate barcode '#{barcode}' in forward shipment '#{@forward_order_id}'."
+      puts "Duplicate barcode '#{barcode}' in forward shipment '#{@forward_order_id}'."
+      return
     end
-    shipment_line = ShipmentLine.new(sku, barcode)
+    shipment_line = ShipmentLine.new(sku, barcode, @shipment_id)
     @shipment_lines << shipment_line
 
     # Indexing for queries
-    @@forward_shipments_by_barcode[barcode] << self
-    @@forward_shipments_by_sku[sku] << self
-  end
-
-  # Class method to read from a CSV file, considering only pending orders
-  def self.read_from_csv(file_path)
-    CSV.foreach(file_path, headers: true) do |row|
-      forward_order_id = row['Channel Order ID']
-
-      # Only process if the forward order is pending
-      next unless PendingForward.pending?(forward_order_id)
-
-      location_name = row['Fulfilment Location Name']
-      location = Location.find_by_full_name(location_name)
-      raise "Location not found for fulfillment location name: '#{location_name}'" unless location
-
-      # Create a new forward shipment
-      forward_shipment = ForwardShipment.new(
-        location,
-        forward_order_id,
-        row['Parent Order ID'],
-        true
-      )
-
-      # Add shipment line
-      forward_shipment.add_shipment_line(row['Client SKU ID / EAN'], row['External Item Code'])
-    end
-  end
-
-  # Query methods for the required data
-  def self.find_by_shipment_id(shipment_id)
-    @@forward_shipments_by_shipment_id[shipment_id]
-  end
-
-  def self.find_by_barcode(barcode)
-    @@forward_shipments_by_barcode[barcode]
-  end
-
-  def self.find_by_sku(sku)
-    @@forward_shipments_by_sku[sku]
-  end
-
-  def self.find_without_return_shipments
-    @@forward_shipments_without_returns
-  end
-
-  def self.find_by_parent_id(parent_id)
-    @@forward_shipments_by_id[parent_id]
-  end
-
-  def self.all
-    @@forward_shipments_by_id.values
+    self.class.forward_shipments_by_barcode[barcode] << self
+    self.class.forward_shipments_by_sku[sku] << self
   end
 
   def add_return_shipment(return_shipment)
     @return_shipments << return_shipment
-    @@forward_shipments_without_returns.delete(self)
+    self.class.forward_shipments_without_returns.delete(self)
+    self.class.forward_shipments_with_returns[@shipment_id] = self
   end
 end

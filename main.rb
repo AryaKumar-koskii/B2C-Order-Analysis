@@ -30,7 +30,7 @@ def main
 
     # Example queries:
     # Find a forward shipment by shipment ID
-    forward_shipment = ForwardShipment.find_by_shipment_id('KO202061')
+    forward_shipment = ForwardShipment.find_by_shipment_id('136635')
     if forward_shipment
       puts "Forward Shipment found: #{forward_shipment.forward_order_id}"
     else
@@ -38,7 +38,7 @@ def main
     end
 
     # Find all forward shipments containing a specific barcode
-    shipments_by_barcode = ForwardShipment.find_by_barcode('k948612')
+    shipments_by_barcode = ForwardShipment.find_by_barcode('K988505')
     puts "Shipments with barcode 'k948612': #{shipments_by_barcode.inspect}"
 
     # Find all forward shipments without any return shipments
