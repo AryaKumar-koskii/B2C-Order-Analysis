@@ -4,7 +4,7 @@ class ReturnShipment
   attr_accessor :forward_shipment, :location, :return_order_status, :shipment_lines
 
   # Static data structure for looking up return shipments by forward shipment
-  @return_shipments_by_forward_shipment = Hash.new { |hash, key| hash[key] = [] }
+  @@return_shipments_by_forward_shipment = Hash.new { |hash, key| hash[key] = [] }
 
   def initialize(forward_shipment, location, return_order_status)
     @forward_shipment = forward_shipment
@@ -13,7 +13,7 @@ class ReturnShipment
     @shipment_lines = [] # Array of ShipmentLine objects
 
     forward_shipment.add_return_shipment(self)
-    @return_shipments_by_forward_shipment[forward_shipment] << self
+    @@return_shipments_by_forward_shipment[forward_shipment] << self
   end
 
   # Method to add a shipment line (SKU and barcode)
@@ -28,15 +28,16 @@ class ReturnShipment
       raise "Location not found for fulfillment location name: '#{row['Fulfillment Location Name']}'" unless location
 
       # Find the corresponding forward shipment by order ID
-      forward_shipment = ForwardShipment.find_by_shipment_id(row['Channel Parent Order ID'])
-      raise "Forward shipment not found for Parent Order ID: '#{row['Channel Parent Order ID']}'" unless forward_shipment
+      forward_shipment = ForwardShipment.find_by_parent_id(row['Channel Parent order ID'])
+      next unless forward_shipment
 
       # Check if the SKU and barcode match any line in the forward shipment
       matching_shipment_line = forward_shipment.shipment_lines.find do |line|
         (line.sku == row['Client SKU ID / EAN'] || row['External Item Code'] && line.barcode == row['External Item Code'])
       end
 
-      raise "No matching forward shipment line found for SKU #{row['Client SKU ID / EAN']} or barcode #{row['External Item Code']}" unless matching_shipment_line
+      # raise "No matching forward shipment line found for SKU #{row['Client SKU ID / EAN']} or barcode #{row['External Item Code']}" unless matching_shipment_line
+      next unless matching_shipment_line
 
       # Create return shipment
       return_shipment = ReturnShipment.new(
@@ -52,6 +53,10 @@ class ReturnShipment
 
   # Return shipments associated with a forward shipment
   def self.find_by_forward_shipment(forward_shipment)
-    @return_shipments_by_forward_shipment[forward_shipment]
+    @@return_shipments_by_forward_shipment[forward_shipment]
+  end
+
+  def self.all
+    @@return_shipments_by_forward_shipment.values.flatten
   end
 end
