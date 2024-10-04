@@ -6,7 +6,7 @@ require_relative '../location'
 require_relative 'forward_shipment'
 
 class ReturnShipment
-  attr_accessor :forward_shipment, :location, :return_order_status, :shipment_lines
+  attr_accessor :forward_shipment, :location, :return_order_status, :shipment_lines, :parent_order_id
 
   # Class instance variable for looking up return shipments by forward shipment
   @return_shipments_by_forward_shipment = Hash.new { |hash, key| hash[key] = [] }
@@ -17,7 +17,11 @@ class ReturnShipment
     # Class method to read from a CSV file
     def read_from_csv(file_path)
       CSV.foreach(file_path, headers: true) do |row|
-        location_name = row['Fulfillment Location Name'] || row['Fulfilment Location Name']
+        parent_order_id = row['Channel Parent order ID']
+        next unless PendingForward.pending?(parent_order_id)
+
+        location_name = row['Fulfillment Location Name']
+
         location = Location.find_by_full_name(location_name)
         unless location
           puts "Location not found for fulfillment location name: '#{location_name}'"
@@ -25,7 +29,6 @@ class ReturnShipment
         end
 
         # Extract necessary fields
-        parent_order_id = row['Channel Parent Order ID'] || row['Channel Parent order ID']
         sku = row['Client SKU ID / EAN']
         barcode = row['External Item Code']
 
@@ -35,7 +38,7 @@ class ReturnShipment
         else
           shipment_data = ForwardShipment.find_shipment_data(parent_order_id, sku)
           unless shipment_data && !shipment_data.empty?
-            puts "#{parent_order_id}, #{sku}"
+            puts "order sku mapping not found for #{parent_order_id}"
             next
           end
 
@@ -52,7 +55,7 @@ class ReturnShipment
                            end
 
         unless forward_shipment
-          puts "Forward shipment not found for Parent Order ID: '#{parent_order_id}'"
+          puts "Forward shipment does not exists for #{parent_order_id}"
           next
         end
 
@@ -92,6 +95,7 @@ class ReturnShipment
     @forward_shipment = forward_shipment
     @location = location
     @return_order_status = return_order_status
+    @parent_order_id = parent_order_id
     @shipment_lines = [] # Array of ShipmentLine objects
 
     forward_shipment.add_return_shipment(self)

@@ -24,7 +24,7 @@ class ForwardShipment
     # Class method to read from a CSV file, considering only pending orders
     def read_from_csv(file_path)
       CSV.foreach(file_path, headers: true) do |row|
-        forward_order_id = row['Channel Order ID']
+        forward_order_id = row['Parent Order ID']
 
         # Only process if the forward order is pending
         next unless PendingForward.pending?(forward_order_id)
@@ -39,7 +39,7 @@ class ForwardShipment
         # Create or retrieve the existing forward shipment
         parent_order_id = row['Parent Order ID']
         shipment_id = row['Shipment ID']
-        forward_shipment = self.forward_shipments_by_parent_id[parent_order_id]
+        forward_shipment = self.forward_shipments_by_shipment_id[shipment_id]
         unless forward_shipment
           forward_shipment = ForwardShipment.new(location, forward_order_id,
                                                  parent_order_id,
@@ -48,12 +48,30 @@ class ForwardShipment
         end
 
         # Add shipment line
-        forward_shipment.add_shipment_line(row['Client SKU ID / EAN'], row['External Item Code'])
+        forward_shipment.add_shipment_line(row['Client SKU ID / EAN'], row['External Item Code'], shipment_id)
 
         # Store data for lookup by parent_order_id and SKU
         key = [parent_order_id, row['Client SKU ID / EAN']]
         self.shipment_data_by_parent_order_id_and_sku[key] ||= []
         self.shipment_data_by_parent_order_id_and_sku[key] << { barcode: row['External Item Code'], shipment_id: shipment_id }
+      end
+
+      def find_forward_shipments_with_multiple_shipments
+        multiple_shipment_orders = []
+
+        # Group shipments by parent_order_id and count the number of shipment_ids
+        forward_shipments_by_parent_id.each do |parent_order_id, forward_shipment|
+          matching_shipments = forward_shipments_by_shipment_id.values.select do |shipment|
+            shipment.parent_order_id == parent_order_id
+          end
+
+          # Check if the parent_order_id is associated with more than one shipment_id
+          if matching_shipments.size > 1
+            multiple_shipment_orders << forward_shipment
+          end
+        end
+
+        multiple_shipment_orders
       end
 
       def find_by_shipment_id(shipment_id)
@@ -83,6 +101,13 @@ class ForwardShipment
       def all
         @forward_shipments_by_parent_id.values
       end
+
+      def find_barcodes_in_multiple_shipments
+        @forward_shipments_by_barcode.select do |barcode, shipments|
+          shipments.size > 1
+        end
+      end
+
     end
 
     # Method to find shipment data by parent order ID and SKU
@@ -107,14 +132,38 @@ class ForwardShipment
     self.class.forward_shipments_without_returns << self unless @return_shipments.any?
   end
 
+  def barcodes_in_same_location?
+    self.shipment_lines.all? do |shipment_line|
+      barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+      barcode_locations && barcode_locations.any? do |barcode_location|
+        barcode_location.location == self.location.alias
+      end
+    end
+  end
+
+  def barcodes_in_other_locations?
+    self.shipment_lines.any? do |shipment_line|
+      barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+      barcode_locations && barcode_locations.any? do |barcode_location|
+        barcode_location.location != self.location.alias
+      end
+    end
+  end
+
+  def barcode_returned?(barcode)
+    self.return_shipments.any? do |return_shipment|
+      return_shipment.shipment_lines.any? { |line| line.barcode == barcode }
+    end
+  end
+
   # Method to add a shipment line (SKU and barcode)
-  def add_shipment_line(sku, barcode)
+  def add_shipment_line(sku, barcode, shipment_id)
     # Check for duplicate barcode in the same shipment
     if @shipment_lines.any? { |line| line.barcode == barcode }
       puts "Duplicate barcode '#{barcode}' in forward shipment '#{@forward_order_id}'."
       return
     end
-    shipment_line = ShipmentLine.new(sku, barcode, @shipment_id)
+    shipment_line = ShipmentLine.new(sku, barcode, shipment_id)
     @shipment_lines << shipment_line
 
     # Indexing for queries
