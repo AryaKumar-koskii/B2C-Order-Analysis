@@ -71,60 +71,66 @@ def main
   end
 end
 
+def valid_forward_shipment?(forward_shipment)
+  forward_shipment.shipment_lines.each do |shipment_line|
+    # Condition 1: Check for return shipments using parent_order_id, SKU, and barcode
+    return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
+    if return_shipments.empty?
+      return false
+    end
+
+    # Iterate over all matching return shipments
+    matching_return_found = return_shipments.any? do |return_shipment|
+      return_shipment.shipment_lines.all? { |line| line.sku == shipment_line.sku && line.barcode == shipment_line.barcode }
+    end
+    unless matching_return_found
+      return false
+    end
+
+    # Condition 2: Barcode location should match the fulfillment location
+    barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+    unless barcode_locations && barcode_locations.all? { |bl| bl.location == shipment_line.fulfilment_location }
+      return false
+    end
+
+    # Condition 3: Validate quantity for the barcode in the location
+    barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
+    unless barcode_location && barcode_location.quantity == 1
+      return false
+    end
+
+    # Condition 4: Ensure barcode is not associated with more than one shipment
+    # barcode_used_in_multiple_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode).size > 1
+    # next if barcode_used_in_multiple_shipments
+
+    # Condition 5: Ensure return exists at barcode level for any of the return shipments
+    return_shipment_barcode_match = return_shipments.any? do |return_shipment|
+      return_shipment.shipment_lines.all? { |line| line.barcode == shipment_line.barcode }
+    end
+    unless return_shipment_barcode_match
+      return false
+    end
+  end
+  true
+end
+
+def get_valid_barcode_location(shipment_line)
+  barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+  barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
+  barcode_location if barcode_location && barcode_location.quantity == 1
+end
+
 def get_valid_forward_orders
   valid_orders = []
 
   ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    valid_forward = true
-    forward_shipment.shipment_lines.each do |shipment_line|
-      # Condition 1: Check for return shipments using parent_order_id, SKU, and barcode
-      return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
-      if return_shipments.empty?
-        valid_forward = false
-        break
-      end
-
-      # Iterate over all matching return shipments
-      matching_return_found = return_shipments.any? do |return_shipment|
-        return_shipment.shipment_lines.all? { |line| line.sku == shipment_line.sku && line.barcode == shipment_line.barcode }
-      end
-      unless matching_return_found
-        valid_forward = false
-        break
-      end
-
-      # Condition 2: Barcode location should match the fulfillment location
-      barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-      unless barcode_locations && barcode_locations.all? { |bl| bl.location == shipment_line.fulfilment_location }
-        valid_forward = false
-        break
-      end
-
-      # Condition 3: Validate quantity for the barcode in the location
-      barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
-      unless barcode_location && barcode_location.quantity == 1
-        valid_forward = false
-        break
-      end
-
-      # Condition 4: Ensure barcode is not associated with more than one shipment
-      # barcode_used_in_multiple_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode).size > 1
-      # next if barcode_used_in_multiple_shipments
-
-      # Condition 5: Ensure return exists at barcode level for any of the return shipments
-      return_shipment_barcode_match = return_shipments.any? do |return_shipment|
-        return_shipment.shipment_lines.all? { |line| line.barcode == shipment_line.barcode }
-      end
-      unless return_shipment_barcode_match
-        valid_forward = false
-        break
-      end
-    end
+    valid_forward = valid_forward_shipment?(forward_shipment)
+    next unless
 
     if valid_forward
       forward_shipment.shipment_lines.each do |shipment_line|
-        barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-        barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
+        barcode_location = get_valid_barcode_location(shipment_line)
+        next unless barcode_location
         # If all conditions match, add to valid_orders
         valid_orders << {
           fulfilment_location: shipment_line.fulfilment_location,
