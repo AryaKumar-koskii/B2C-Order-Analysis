@@ -1,7 +1,8 @@
 class ShipmentLine
-  attr_accessor :sku, :barcode, :shipment_id
+  attr_accessor :fulfilment_location, :sku, :barcode, :shipment_id
 
-  def initialize(sku, barcode, shipment_id)
+  def initialize(fulfilment_location = nil, sku, barcode, shipment_id)
+    @fulfilment_location = fulfilment_location
     @sku = sku
     @barcode = barcode
     @shipment_id = shipment_id

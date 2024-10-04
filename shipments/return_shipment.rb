@@ -48,11 +48,7 @@ class ReturnShipment
         end
 
         # Find the corresponding forward shipment
-        forward_shipment = if shipment_id
-                             ForwardShipment.find_by_shipment_id(shipment_id)
-                           else
-                             ForwardShipment.find_by_parent_id(parent_order_id)
-                           end
+        forward_shipment = ForwardShipment.find_by_parent_id(parent_order_id)
 
         unless forward_shipment
           puts "Forward shipment does not exists for #{parent_order_id}"

@@ -39,7 +39,7 @@ class ForwardShipment
         # Create or retrieve the existing forward shipment
         parent_order_id = row['Parent Order ID']
         shipment_id = row['Shipment ID']
-        forward_shipment = self.forward_shipments_by_shipment_id[shipment_id]
+        forward_shipment = self.forward_shipments_by_parent_id[parent_order_id]
         unless forward_shipment
           forward_shipment = ForwardShipment.new(location, forward_order_id,
                                                  parent_order_id,
@@ -48,7 +48,7 @@ class ForwardShipment
         end
 
         # Add shipment line
-        forward_shipment.add_shipment_line(row['Client SKU ID / EAN'], row['External Item Code'], shipment_id)
+        forward_shipment.add_shipment_line(row['Fulfilment Location Name'], row['Client SKU ID / EAN'], row['External Item Code'], shipment_id)
 
         # Store data for lookup by parent_order_id and SKU
         key = [parent_order_id, row['Client SKU ID / EAN']]
@@ -111,7 +111,7 @@ class ForwardShipment
     end
 
     # Method to find shipment data by parent order ID and SKU
-    def find_shipment_data(parent_order_id, sku)
+    def find_shipment_data(parent_order_id, sku = false)
       key = [parent_order_id, sku]
       self.shipment_data_by_parent_order_id_and_sku[key]
     end
@@ -157,13 +157,13 @@ class ForwardShipment
   end
 
   # Method to add a shipment line (SKU and barcode)
-  def add_shipment_line(sku, barcode, shipment_id)
+  def add_shipment_line(fulfilment_location, sku, barcode, shipment_id)
     # Check for duplicate barcode in the same shipment
     if @shipment_lines.any? { |line| line.barcode == barcode }
       puts "Duplicate barcode '#{barcode}' in forward shipment '#{@forward_order_id}'."
       return
     end
-    shipment_line = ShipmentLine.new(sku, barcode, shipment_id)
+    shipment_line = ShipmentLine.new(fulfilment_location, sku, barcode, shipment_id)
     @shipment_lines << shipment_line
 
     # Indexing for queries
