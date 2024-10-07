@@ -1,0 +1,22 @@
+Fulfilment Location | Parent Order Code | Shipment ID | Barcode | Barcode Location | Quantity
+----------------------------------------------------------------------------------------------------
+koskii karol bagh | KO211124 | 155959 | K1062754 | koskii karol bagh | 1
+increff warehouse bangalore | KO211124 | 155959 | K994227 | increff warehouse bangalore | 1
+koskii annanagar | KO203006 | 137455 | K1109713 | koskii annanagar | 1
+koskii banjara hills | KO203006 | 137455 | K1109835 | koskii banjara hills | 1
+koskii cathedral road | KO202865 | 137500 | K801706 | koskii cathedral road | 1
+koskii sarath city mall | KO203983 | 139644 | K1067205 | koskii sarath city mall | 1
+koskii mg road kochi | KO202894 | 137241 | K1102369 | koskii mg road kochi | 1
+koskii mg road kochi | KO202894 | 137241 | K1112288 | koskii mg road kochi | 1
+koskii annanagar | KO205152 | 142625 | K1112013 | koskii annanagar | 1
+koskii nexus mall | KO203236 | 137995 | K1101787 | koskii nexus mall | 1
+koskii jubilee hills | KO206841 | 146321 | K990348 | koskii jubilee hills | 1
+koskii annanagar | KO206255 | 145301 | K1087622 | koskii annanagar | 1
+increff warehouse bangalore | KO206617 | 145883 | B1191C8352C | increff warehouse bangalore | 1
+koskii jubilee hills | NYKF24107870 | 146554 | B018D9B6C3E | koskii jubilee hills | 1
+increff warehouse bangalore | KO204391 | 140614 | K1095319 | increff warehouse bangalore | 1
+increff warehouse bangalore | 5b3214a2-2e83-4878-9c31-8fa4d0a65d8c | 154611 | AF72DBCE0BB | increff warehouse bangalore | 1
+increff warehouse bangalore | 71dc6ac5-161f-4a0a-b9de-b8115d438b57 | 155465 | AF6CFC42A61 | increff warehouse bangalore | 1
+increff warehouse bangalore | KO211129 | 155899 | B5C0A101C33 | increff warehouse bangalore | 1
+increff warehouse bangalore | KO212627 | 160020 | B2930229243 | increff warehouse bangalore | 1
+increff warehouse bangalore | KO212627 | 160020 | B8192114E99 | increff warehouse bangalore | 1
