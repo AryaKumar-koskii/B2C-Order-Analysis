@@ -8,8 +8,10 @@ class PendingForward
   def self.load_from_csv(file_path)
     require 'set'
     CSV.foreach(file_path, headers: true) do |row|
-      forward_order_code = row['forward_order_code']
-      @pending_order_ids.add(forward_order_code)
+      if row['is_completed'] != "TRUE"
+        forward_order_code = row['forward_order_code']
+        @pending_order_ids.add(forward_order_code)
+      end
     end
   end
 

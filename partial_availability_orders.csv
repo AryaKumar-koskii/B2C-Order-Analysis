@@ -1,30 +1,30 @@
-Fulfilment Location,Parent Order Code,Shipment ID,Barcode,Barcode Location,Quantity
-koskii karol bagh,KO211124,155959,K1062754,koskii karol bagh,1
-increff warehouse bangalore,KO211124,155878,K772898,koskii warehouse bangalore,1
-increff warehouse bangalore,KO211124,155878,K994227,increff warehouse bangalore,1
-koskii annanagar,KO203006,137455,K1109637,koskii falcon city,1
-koskii annanagar,KO203006,137565,K1109713,koskii annanagar,1
-koskii banjara hills,KO203006,137577,K1109835,koskii banjara hills,1
-koskii commercial,1164dcf5-b094-46b6-ae75-09c5032629fd,143706,K912910,increff warehouse bangalore,1
-koskii annanagar,KO205152,142625,K1112013,koskii annanagar,1
-increff warehouse bangalore,KO205152,142473,B0A4C239C64,delhi rajouri,1
-koskii jubilee hills,NYKF24107870,146554,B018D9B6C3E,koskii jubilee hills,1
-increff warehouse bangalore,KO205513,143895,K973768,koskii warehouse bangalore,1
-increff warehouse bangalore,8de04c52-2232-4b44-8d52-729c51a9c161,144371,B02491835B2,tehey urs road,1
-increff warehouse bangalore,KO206015,144744,B2FB26C160D,koskii mall of asia,1
-increff warehouse bangalore,KO206132,145076,K923376,koskii warehouse bangalore,1
-increff warehouse bangalore,KO204540,140777,K1004625,koskii warehouse bangalore,1
-increff warehouse bangalore,04fe77ec-3d93-4bcd-a49e-828777261dc0,137711,K1098335,koskii warehouse bangalore,1
-increff warehouse bangalore,8c8de740-be0c-4db8-8c57-2bc9fd490ba0,145939,K1056713,koskii warehouse bangalore,1
-increff warehouse bangalore,NYKF24045990,145810,K1084574,koskii warehouse bangalore,1
-increff warehouse bangalore,1510915e-3a77-488c-92e7-abd1e2e9c578,140873,K1056713,koskii warehouse bangalore,1
-increff warehouse bangalore,KO204681,141153,AFA0B7EB000,koskii banjara hills,1
-increff warehouse bangalore,17e236c2-e3a9-48d4-b180-a1cb1ba473ba,141688,K850035,koskii warehouse bangalore,1
-increff warehouse bangalore,16d55031-d281-473f-99fb-1e8068c16e6b,153028,K1004625,koskii warehouse bangalore,1
-increff warehouse bangalore,ef57f692-5ba8-4252-99c0-1f587b08853c,153295,K998551,koskii warehouse bangalore,1
-increff warehouse bangalore,5b3214a2-2e83-4878-9c31-8fa4d0a65d8c,154611,AF72DBCE0BB,increff warehouse bangalore,1
-increff warehouse bangalore,364a2af1-3f17-4983-bb76-71df7010ef6d,151654,K840705,koskii warehouse bangalore,1
-increff warehouse bangalore,800ddac3-563e-4938-a743-9faff554a015,152031,K1024282,koskii warehouse bangalore,1
-increff warehouse bangalore,c0df974f-49dc-4839-97e1-208e2ad050b4,152076,K1001484,koskii warehouse bangalore,1
-increff warehouse bangalore,e3bbe7d8-6f67-4b5f-be7b-498515c6c689,151918,K1009502,koskii warehouse bangalore,1
-increff warehouse bangalore,f88d3133-f4cf-4723-92ee-1d20cffeb4c0,158849,K1099081,koskii warehouse bangalore,1
+Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity
+koskii karol bagh,KO211124,155959,K1062754,SSUS0020904_ONION_PINK,koskii karol bagh,1
+increff warehouse bangalore,KO211124,155878,K772898,SSUS0019609_BLACK,koskii warehouse bangalore,1
+increff warehouse bangalore,KO211124,155878,K994227,SSUS0020869_BLUE,increff warehouse bangalore,1
+koskii annanagar,KO203006,137455,K1109637,SSUS0038256_MAUVE,koskii falcon city,1
+koskii annanagar,KO203006,137565,K1109713,SSUS0038254_PISTA_GREEN,koskii annanagar,1
+koskii banjara hills,KO203006,137577,K1109835,SSUS0038262_LAVENDER,koskii banjara hills,1
+koskii commercial,1164dcf5-b094-46b6-ae75-09c5032629fd,143706,K912910,SAUS0032354_YELLOW,increff warehouse bangalore,1
+koskii annanagar,KO205152,142625,K1112013,SAUS0017014_YELLOW,koskii annanagar,1
+increff warehouse bangalore,KO205152,142473,B0A4C239C64,SAUS0016505_WINE,delhi rajouri,1
+koskii jubilee hills,NYKF24107870,146554,B018D9B6C3E,SSUS0022506_PEACH,koskii jubilee hills,1
+increff warehouse bangalore,KO205513,143895,K973768,SAUS0030044_PINK,koskii warehouse bangalore,1
+increff warehouse bangalore,KO206015,144744,B2FB26C160D,SAUS0032539_BEIGE,koskii mall of asia,1
+increff warehouse bangalore,KO206132,145076,K923376,SSRM0033529_BLACK_RED_L,koskii warehouse bangalore,1
+increff warehouse bangalore,96a739c9-755c-44fb-a3f9-70a30eb8ac11,140655,AFA0F1E30BA,SSRM0029629_YELLOW_XL,koskii warehouse bangalore,1
+increff warehouse bangalore,KO204540,140777,K1004625,SSRM0030430_ONION_PINK_L,koskii warehouse bangalore,1
+increff warehouse bangalore,04fe77ec-3d93-4bcd-a49e-828777261dc0,137711,K1098335,SSRM0030428_RANI_PINK_M,koskii warehouse bangalore,1
+increff warehouse bangalore,8c8de740-be0c-4db8-8c57-2bc9fd490ba0,145939,K1056713,SSRM0032964_CREAM_RED_L,koskii warehouse bangalore,1
+increff warehouse bangalore,NYKF24045990,145810,K1084574,SAUS0030407_LAVENDER,koskii warehouse bangalore,1
+increff warehouse bangalore,1510915e-3a77-488c-92e7-abd1e2e9c578,140873,K1056713,SSRM0032964_CREAM_RED_L,koskii warehouse bangalore,1
+increff warehouse bangalore,KO204681,141153,AFA0B7EB000,SSRM0034972_SEA_GREEN_XXL,koskii banjara hills,1
+increff warehouse bangalore,17e236c2-e3a9-48d4-b180-a1cb1ba473ba,141688,K850035,SAUS0021889_GREY,koskii warehouse bangalore,1
+increff warehouse bangalore,16d55031-d281-473f-99fb-1e8068c16e6b,153028,K1004625,SSRM0030430_ONION_PINK_L,koskii warehouse bangalore,1
+increff warehouse bangalore,ef57f692-5ba8-4252-99c0-1f587b08853c,153295,K998551,SAUS0032362_BEIGE,koskii warehouse bangalore,1
+increff warehouse bangalore,5b3214a2-2e83-4878-9c31-8fa4d0a65d8c,154611,AF72DBCE0BB,SAUS0029652_LAVENDER,increff warehouse bangalore,1
+increff warehouse bangalore,364a2af1-3f17-4983-bb76-71df7010ef6d,151654,K840705,SAUS0021889_GREY,koskii warehouse bangalore,1
+increff warehouse bangalore,800ddac3-563e-4938-a743-9faff554a015,152031,K1024282,SSRM0032959_PARROT_GREEN_XL,koskii warehouse bangalore,1
+increff warehouse bangalore,c0df974f-49dc-4839-97e1-208e2ad050b4,152076,K1001484,SSRM0032976_MUSTARD_M,koskii warehouse bangalore,1
+increff warehouse bangalore,e3bbe7d8-6f67-4b5f-be7b-498515c6c689,151918,K1009502,SSRM0032973_PARROT_GREEN_PINK_M,koskii warehouse bangalore,1
+increff warehouse bangalore,f88d3133-f4cf-4723-92ee-1d20cffeb4c0,158849,K1099081,SSRM0036163_MUSTARD_M,koskii warehouse bangalore,1

@@ -29,15 +29,26 @@ def main
     puts "Data loading completed successfully!"
 
     valid_orders = get_valid_forward_orders_with_returns
+    p "valid_orders with returns"
     valid_orders.each { |valid_order|
       p valid_order
     }
+    p "---------------------------------------\n---------------------------------------"
 
     sto_orders = get_orders_with_wrong_barcode_location_with_returns
+    p "orders with barcode at diff location with returns"
     sto_orders.each do |order|
       p order
     end
+    p "---------------------------------------\n---------------------------------------"
 
+    write_all_read_forwards
+
+    valid_orders_without_returns = get_orders_without_returns_at_right_location
+    p "valid_orders with out returns"
+    valid_orders_without_returns.each do |order|
+      p order
+    end
 
   rescue => e
     puts "An error occurred: #{e.message}"
@@ -118,20 +129,36 @@ def partial_valid_shipment?(forward_shipment)
   true
 end
 
+def valid_shipment_without_returns?(forward_shipment)
+  forward_shipment.shipment_lines.each do |shipment_line|
+    # Check for return shipments for the current forward shipment
+    unless get_valid_barcode_location(shipment_line)
+      return false
+    end
+
+    # Ensure that at least one return shipment matches the barcode
+    if ForwardShipment.find_by_barcode(shipment_line.barcode).size > 1
+      return false
+    end
+  end
+  true
+end
+
 def write_orders_to_text_file(valid_orders, file_name)
   File.open(file_name, "w") do |file|
     # Write a header line
-    file.puts "Fulfilment Location,Parent Order Code,Shipment ID,Barcode,Barcode Location,Quantity"
+    file.puts "Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity"
 
     # Write each valid order
     valid_orders.each do |order|
-      file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:barcode_location]},#{order[:quantity]}"
+      file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:sku]},#{order[:barcode_location]},#{order[:quantity]}"
     end
   end
 end
 
 def get_valid_barcode_location(shipment_line)
   barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+  return false unless barcode_locations
   barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
   barcode_location if barcode_location && barcode_location.quantity == 1
 end
@@ -192,6 +219,52 @@ def get_orders_with_wrong_barcode_location_with_returns
   # Write the orders to a text file
   write_orders_to_text_file(partial_availability_orders, 'partial_availability_orders.csv')
   partial_availability_orders
+end
+
+def get_orders_without_returns_at_right_location
+  forwards_without_returns = []
+
+  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+    valid_forward = valid_shipment_without_returns?(forward_shipment)
+
+    next unless valid_forward
+
+    forward_shipment.shipment_lines.each do |shipment_line|
+      barcode_location = get_valid_barcode_location(shipment_line)
+      next unless barcode_location
+
+      # If all conditions match, add to valid_orders
+      forwards_without_returns << {
+        fulfilment_location: shipment_line.fulfilment_location,
+        parent_order_code: forward_shipment.parent_order_id,
+        shipment_id: shipment_line.shipment_id,
+        sku: shipment_line.sku,
+        barcode: shipment_line.barcode,
+        barcode_location: barcode_location.location,
+        quantity: barcode_location.quantity
+      }
+
+    end
+  end
+
+  write_orders_to_text_file(forwards_without_returns, 'forwards_without_returns.csv')
+  forwards_without_returns
+end
+
+def write_all_read_forwards
+  all_forwards = []
+  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+    forward_shipment.shipment_lines.each do |shipment_line|
+      all_forwards << {
+        fulfilment_location: shipment_line.fulfilment_location,
+        parent_order_code: forward_shipment.parent_order_id,
+        shipment_id: shipment_line.shipment_id,
+        sku: shipment_line.sku,
+        barcode: shipment_line.barcode,
+      }
+    end
+  end
+  write_orders_to_text_file(all_forwards, 'read_forwards.csv')
 end
 
 # Run the main method
