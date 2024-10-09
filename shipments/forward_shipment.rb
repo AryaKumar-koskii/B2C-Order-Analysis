@@ -25,6 +25,7 @@ class ForwardShipment
     def read_from_csv(file_path)
       CSV.foreach(file_path, headers: true) do |row|
         forward_order_id = row['Parent Order ID']
+        parent_order_id = row['Parent Order ID']
 
         # Only process if the forward order is pending
         next unless PendingForward.pending?(forward_order_id)
@@ -37,7 +38,6 @@ class ForwardShipment
         end
 
         # Create or retrieve the existing forward shipment
-        parent_order_id = row['Parent Order ID']
         shipment_id = row['Shipment ID']
         forward_shipment = self.forward_shipments_by_parent_id[parent_order_id]
         unless forward_shipment
@@ -50,68 +50,67 @@ class ForwardShipment
         # Add shipment line
         forward_shipment.add_shipment_line(row['Fulfilment Location Name'], row['Client SKU ID / EAN'], row['External Item Code'], shipment_id)
 
-        # Store data for lookup by parent_order_id and SKU
+        # Store data for lookup by parent_order_id and SKU``
         key = [parent_order_id, row['Client SKU ID / EAN']]
         self.shipment_data_by_parent_order_id_and_sku[key] ||= []
         self.shipment_data_by_parent_order_id_and_sku[key] << { barcode: row['External Item Code'], shipment_id: shipment_id }
       end
+    end
 
-      def find_forward_shipments_with_multiple_shipments
-        multiple_shipment_orders = []
+    def find_forward_shipments_with_multiple_shipments
+      multiple_shipment_orders = []
 
-        # Group shipments by parent_order_id and count the number of shipment_ids
-        forward_shipments_by_parent_id.each do |parent_order_id, forward_shipment|
-          matching_shipments = forward_shipments_by_shipment_id.values.select do |shipment|
-            shipment.parent_order_id == parent_order_id
-          end
-
-          # Check if the parent_order_id is associated with more than one shipment_id
-          if matching_shipments.size > 1
-            multiple_shipment_orders << forward_shipment
-          end
+      # Group shipments by parent_order_id and count the number of shipment_ids
+      forward_shipments_by_parent_id.each do |parent_order_id, forward_shipment|
+        matching_shipments = forward_shipments_by_shipment_id.values.select do |shipment|
+          shipment.parent_order_id == parent_order_id
         end
 
-        multiple_shipment_orders
-      end
-
-      def find_by_shipment_id(shipment_id)
-        @forward_shipments_by_shipment_id[shipment_id]
-      end
-
-      def find_by_barcode(barcode)
-        @forward_shipments_by_barcode[barcode]
-      end
-
-      def find_by_sku(sku)
-        @forward_shipments_by_sku[sku]
-      end
-
-      def find_without_return_shipments
-        @forward_shipments_without_returns
-      end
-
-      def find_by_parent_id(parent_id)
-        @forward_shipments_by_parent_id[parent_id]
-      end
-
-      def find_with_return_shipments
-        @forward_shipments_with_returns
-      end
-
-      def all
-        @forward_shipments_by_parent_id.values
-      end
-
-      def find_barcodes_in_multiple_shipments
-        @forward_shipments_by_barcode.select do |barcode, shipments|
-          shipments.size > 1
+        # Check if the parent_order_id is associated with more than one shipment_id
+        if matching_shipments.size > 1
+          multiple_shipment_orders << forward_shipment
         end
       end
 
+      multiple_shipment_orders
+    end
+
+    def find_by_shipment_id(shipment_id)
+      @forward_shipments_by_shipment_id[shipment_id]
+    end
+
+    def find_by_barcode(barcode)
+      @forward_shipments_by_barcode[barcode]
+    end
+
+    def find_by_sku(sku)
+      @forward_shipments_by_sku[sku]
+    end
+
+    def find_without_return_shipments
+      @forward_shipments_without_returns
+    end
+
+    def find_by_parent_id(parent_id)
+      @forward_shipments_by_parent_id[parent_id]
+    end
+
+    def find_with_return_shipments
+      @forward_shipments_with_returns
+    end
+
+    def all
+      @forward_shipments_by_parent_id.values
+    end
+
+    def find_barcodes_in_multiple_shipments
+      @forward_shipments_by_barcode.select do |barcode, shipments|
+        shipments.size > 1
+      end
     end
 
     # Method to find shipment data by parent order ID and SKU
-    def find_shipment_data(parent_order_id, sku = false)
+    def find_shipment_data(parent_order_id, sku)
       key = [parent_order_id, sku]
       self.shipment_data_by_parent_order_id_and_sku[key]
     end

@@ -38,7 +38,7 @@ class ReturnShipment
         else
           shipment_data = ForwardShipment.find_shipment_data(parent_order_id, sku)
           unless shipment_data && !shipment_data.empty?
-            puts "order sku mapping not found for #{parent_order_id}"
+            puts "order sku mapping not found for #{parent_order_id}, SKU: #{sku}"
             next
           end
 
