@@ -4,29 +4,33 @@ require_relative 'location'
 require_relative 'barcode_location'
 require_relative 'pending_forward'
 
+def load_files
+  puts "Loading location alias mapping..."
+  Location.load_locations('../csv_files/location_alias_mapping.csv')
+
+  # Step 2: Load pending forwards
+  puts "Loading pending forwards..."
+  PendingForward.load_from_csv('../csv_files/pending_forwards.csv')
+
+  # Step 3: Load forward shipments (only pending)
+  puts "Loading forward shipments..."
+  ForwardShipment.read_from_csv('../csv_files/WMS_SFS_merged_data(for_analysis).csv')
+
+  # Step 4: Load return shipments
+  puts "Loading return shipments..."
+  ReturnShipment.read_from_csv('../csv_files/ReturnOrderItemLevelReport.csv')
+
+  # Step 5: Load barcode location data
+  puts "Loading barcode location data..."
+  BarcodeLocation.read_from_csv('../csv_files/barcode_location.csv')
+
+  puts "Data loading completed successfully!"
+end
+
 def main
   begin
     # Step 1: Load the location alias mapping
-    puts "Loading location alias mapping..."
-    Location.load_locations('../csv_files/location_alias_mapping.csv')
-
-    # Step 2: Load pending forwards
-    puts "Loading pending forwards..."
-    PendingForward.load_from_csv('../csv_files/pending_forwards.csv')
-
-    # Step 3: Load forward shipments (only pending)
-    puts "Loading forward shipments..."
-    ForwardShipment.read_from_csv('../csv_files/WMS_SFS_merged_data(for_analysis).csv')
-
-    # Step 4: Load return shipments
-    puts "Loading return shipments..."
-    ReturnShipment.read_from_csv('../csv_files/ReturnOrderItemLevelReport.csv')
-
-    # Step 5: Load barcode location data
-    puts "Loading barcode location data..."
-    BarcodeLocation.read_from_csv('../csv_files/barcode_location.csv')
-
-    puts "Data loading completed successfully!"
+    load_files
 
     valid_orders = get_valid_forward_orders_with_returns
     p "valid_orders with returns"
