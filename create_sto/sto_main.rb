@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require_relative 'read_sto_file'
 require_relative '../../config'
+require_relative '../location'
 require 'net/http'
 require 'uri'
 require 'json'
@@ -41,12 +42,11 @@ def construct_payload(from_loc, to_loc, sto_records)
     "jsonrpc": "2.0",
     "params": {
       "args": {
-        "from_location_code": from_loc,
-        "to_location_code": to_loc,
-        "order_code": "SO_#{Date.today}-STO",
+        "location_code": from_loc.location_code.to_i,
+        "partner_code": to_loc.location_code.to_i,
+        "order_code": "SO_#{Time.now.to_datetime}_#{from_loc.location_code.to_i}_#{to_loc.location_code.to_i}-STO",
         "order_time": Time.now.to_date,
         "qc_status": "PASS",
-        "partner_code": "10",
         "currency": "INR",
         "order_items": order_items
       }
@@ -55,6 +55,9 @@ def construct_payload(from_loc, to_loc, sto_records)
 end
 
 def load_file
+  p 'loading location_mapping file'
+  Location.load_locations('../csv_files/location_alias_mapping.csv')
+
   p 'loading file to create STO'
   ReadSTOFile.read_from_csv('../results/partial_availability_orders.csv')
 end
@@ -64,14 +67,16 @@ def main
     load_file
 
     ReadSTOFile.sto_records_by_from_to.each do |(from_loc, to_loc), sto_records|
-      payload = construct_payload(from_loc, to_loc, sto_records) if from_loc != to_loc
-      puts "Sending payload for from_loc: #{from_loc}, to_loc: #{to_loc}"
-      response = send_api_request(payload)
-      # Handle the response as needed
-      if response.code.to_i == 200
-        puts 'Request was successful.'
-      else
-        puts 'Request failed.'
+      if from_loc != to_loc
+        payload = construct_payload(Location.find_by_full_name(from_loc), Location.find_by_full_name(to_loc), sto_records)
+        puts "Sending payload for from_loc: #{from_loc}, to_loc: #{to_loc}"
+        response = send_api_request(payload)
+        # Handle the response as needed
+        if response.code.to_i == 200
+          puts 'Request was successful.'
+        else
+          puts 'Request failed.'
+        end
       end
     end
 
