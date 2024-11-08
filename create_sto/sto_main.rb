@@ -29,7 +29,7 @@ def send_api_request(payload)
   response
 end
 
-def construct_payload(from_loc, to_loc, sto_records)
+def construct_payload(from_loc, to_loc, sto_records, order_code)
   order_items = sto_records.each_with_index.map do |sto_record, index|
     {
       "order_item_code": "SO_#{Date.today}-STO_#{index + 1}",
@@ -44,7 +44,7 @@ def construct_payload(from_loc, to_loc, sto_records)
       "args": {
         "location_code": from_loc.location_code.to_i,
         "partner_code": to_loc.location_code.to_i,
-        "order_code": "SO_#{Time.now.to_datetime}_#{from_loc.location_code.to_i}_#{to_loc.location_code.to_i}-STO",
+        "order_code": order_code,
         "order_time": Time.now.to_date,
         "qc_status": "PASS",
         "currency": "INR",
@@ -62,18 +62,46 @@ def load_file
   ReadSTOFile.read_from_csv('../results/partial_availability_orders.csv')
 end
 
+def write_successful_stos_to_csv(sto_records, csv_file_path, response)
+  headers = %w[from_location to_location barcode sku quantity SO PO]
+
+  # Check if file is empty before opening for appending
+  is_file_empty = File.zero?(csv_file_path) if File.exist?(csv_file_path)
+
+  CSV.open(csv_file_path, 'a') do |csv|
+    # Write headers if the file is empty
+    csv << headers if is_file_empty
+
+    sto_records.each do |sto_record|
+      csv << [
+        sto_record.from_loc,
+        sto_record.to_loc,
+        sto_record.barcode,
+        sto_record.sku,
+        sto_record.quantity,
+        response["SO"].to_s,
+        response["PO"].to_s
+      ]
+    end
+  end
+end
+
 def main
+  csv_file_path = '../results/successful_stos.csv'
   begin
     load_file
 
     ReadSTOFile.sto_records_by_from_to.each do |(from_loc, to_loc), sto_records|
+      order_code = "SO_#{Time.now.to_datetime}_#{Location.find_by_full_name(from_loc).location_code.to_i}_#{ Location.find_by_full_name(to_loc).location_code.to_i}-STO"
       if from_loc != to_loc
-        payload = construct_payload(Location.find_by_full_name(from_loc), Location.find_by_full_name(to_loc), sto_records)
+        payload = construct_payload(Location.find_by_full_name(from_loc), Location.find_by_full_name(to_loc), sto_records, order_code)
         puts "Sending payload for from_loc: #{from_loc}, to_loc: #{to_loc}"
+        p order_code
         response = send_api_request(payload)
         # Handle the response as needed
         if response.code.to_i == 200
           puts 'Request was successful.'
+          write_successful_stos_to_csv(sto_records, csv_file_path, JSON.parse(response.body))
         else
           puts 'Request failed.'
         end
