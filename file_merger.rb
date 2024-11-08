@@ -32,7 +32,10 @@ class FileMerger
     input_directory = File.join(project_root, 'csv_files', 'return_order')
     output_file = File.join(project_root, 'csv_files/new_merged', 'return_order.csv')
 
-    process_csv_files(input_directory, output_file, [], ->(_row) { true })
+    # Filter rows where 'Return Order Status' is 'COMPLETED' and 'Return Order Item Status' is 'RECEIVED'
+    process_csv_files(input_directory, output_file, [], ->(row) {
+      row['Return Order Status'] == 'COMPLETED' && row['Return Order Item Status'] == 'RECEIVED'
+    })
   end
 
   def merge_order_files
@@ -42,7 +45,7 @@ class FileMerger
     parent_order_mapping = ParentOrderMapping.new('../csv_files/forward_Parent_order_code_mapping.csv')
     file1_path = File.join(project_root, 'csv_files/new_merged/SFS_outward.csv')
     file2_path = File.join(project_root, 'csv_files/new_merged/WMS_outward.csv')
-    output_file = File.join(project_root, 'csv_files/new_merged/forward_order_1.csv')
+    output_file = File.join(project_root, 'csv_files/new_merged/forward_order.csv')
 
     begin
       df1 = CSV.read(file1_path, headers: true).map(&:to_hash)
