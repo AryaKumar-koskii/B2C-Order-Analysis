@@ -88,6 +88,9 @@ def valid_forward_shipment?(forward_shipment)
     return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
     return false if return_shipments.empty?
 
+    forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
+    return false unless forward_shipments.count > 1
+
     # Iterate over all matching return shipments
     matching_return_found = return_shipments.any? do |return_shipment|
       return_shipment.shipment_lines.all? { |line| line.sku == shipment_line.sku && line.barcode == shipment_line.barcode }
@@ -122,6 +125,9 @@ def partial_valid_shipment?(forward_shipment)
     # Check for return shipments for the current forward shipment
     return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
     return false if return_shipments.empty?
+
+    forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
+    return false unless forward_shipments.count > 1
 
     # Get all locations for the barcode
     barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
@@ -175,8 +181,19 @@ end
 
 def partial_valid_shipment_without_returns?(forward_shipment)
   forward_shipment.shipment_lines.each do |shipment_line|
+
+    return false if shipment_line.barcode.nil?
+
     barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
     return false unless barcode_locations
+
+    forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
+    return false unless forward_shipments.count > 1
+
+    if barcode_locations.size > 1
+      barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
+      return false if barcode_location && (barcode_location.quantity < 0 || barcode_location.quantity > 1)
+    end
 
     # Validate if the barcode has a valid quantity in any location
     valid_quantity_location = barcode_locations.find { |bl| bl.quantity == 1 }
