@@ -34,6 +34,10 @@ class BarcodeLocation
   def self.read_from_csv(file_path)
     CSV.foreach(file_path, headers: true) do |row|
       location_with_stock = row['Location']
+
+      if ['KSB/Stock', 'Physical Locations/Inter-warehouse transit'].include?(location_with_stock)
+        next
+      end
       location_alias = location_with_stock.gsub('/Stock', '') # Remove "/Stock"
 
       location = Location.find_by_alias(location_alias)
