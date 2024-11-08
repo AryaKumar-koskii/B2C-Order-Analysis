@@ -9,7 +9,7 @@ class ParentOrderMapping
   def load_mappings
     mappings={}
     CSV.foreach(@file_path, headers: true) do |row|
-      order_code = row['order_code']
+      order_code = row['order code']
       parent_order_code = row['parent_order_code']
       mappings[order_code] = parent_order_code
     end
