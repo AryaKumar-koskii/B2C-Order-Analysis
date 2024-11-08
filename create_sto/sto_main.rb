@@ -9,10 +9,10 @@ require 'time'
 require 'date'
 
 def send_api_request(payload)
-  uri = URI.parse('http://localhost:8069/b2b_order/create') # Replace with your actual API endpoint
+  uri = URI.parse(ODOO_LOCAL) # Replace with your actual API endpoint
 
   http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = false # Use SSL/TLS if required
+  http.use_ssl = true # True if https
 
   request = Net::HTTP::Post.new(uri.request_uri, { 'Content-Type' => 'application/json', 'odoo_token' => ODOO_TOKEN })
   request.body = payload.to_json
