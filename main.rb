@@ -301,6 +301,7 @@ end
 
 def get_partial_valid_barcodes(shipment_line)
   barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+  return false unless barcode_locations
   barcode_location = barcode_locations.find { |bl| bl.quantity == 1 }
   barcode_location if barcode_location
 end
@@ -337,7 +338,7 @@ def get_orders_with_wrong_barcode_location_with_returns(is_shipment_level = fals
   partial_availability_orders = []
 
   ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipment = partial_valid_shipment?(forward_shipment)
+    shipment = partial_valid_shipment?(forward_shipment, is_shipment_level)
     next unless shipment
     forward_shipment.shipment_lines.each do |shipment_line|
       barcode_location = get_partial_valid_barcodes(shipment_line)
@@ -394,7 +395,7 @@ def get_partial_valid_orders_without_returns(is_shipment_level = false)
   partial_valid_orders = []
 
   ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipment = partial_valid_shipment_without_returns?(forward_shipment)
+    shipment = partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level)
     next unless shipment
     forward_shipment.shipment_lines.each do |shipment_line|
       barcode_location = get_partial_valid_barcodes(shipment_line)
