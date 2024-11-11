@@ -292,6 +292,7 @@ def valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
   valid_shipments
 end
 
+
 def get_valid_barcode_location(shipment_line)
   barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
   return false unless barcode_locations
