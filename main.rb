@@ -118,6 +118,13 @@ end
 def valid_forward_shipment?(forward_shipment, is_shipment_level = false)
   valid_shipments = []
   forward_shipment.shipment_lines.each do |shipment_line|
+
+    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+    if is_shipment_done.include?(shipment_line.shipment_id)
+      next if is_shipment_level
+      return false
+    end
+
     # Condition 1: Check for return shipments using parent_order_id, SKU, and barcode
     return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
     # p return_shipments unless return_shipments.empty?
@@ -125,12 +132,6 @@ def valid_forward_shipment?(forward_shipment, is_shipment_level = false)
       next if is_shipment_level
       return false
     end
-
-    # forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
-    # unless forward_shipments.count > 1
-    #   next if is_shipment_level
-    #   return false
-    # end
 
     # Iterate over all matching return shipments
     matching_return_found = return_shipments.any? do |return_shipment|
@@ -176,6 +177,13 @@ end
 def partial_valid_shipment?(forward_shipment, is_shipment_level = false)
   valid_shipments = []
   forward_shipment.shipment_lines.each do |shipment_line|
+
+    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+    if is_shipment_done.include?(shipment_line.shipment_id)
+      next if is_shipment_level
+      return false
+    end
+
     # Check for return shipments for the current forward shipment
     return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
     if return_shipments.empty?
@@ -239,6 +247,12 @@ def partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level 
   forward_shipment.shipment_lines.each do |shipment_line|
     return false if shipment_line.barcode.nil?
 
+    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+    if is_shipment_done.include?(shipment_line.shipment_id)
+      next if is_shipment_level
+      return false
+    end
+
     barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
     unless barcode_locations
       next if is_shipment_level
@@ -278,6 +292,13 @@ end
 def valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
   valid_shipments = []
   forward_shipment.shipment_lines.each do |shipment_line|
+
+    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+    if is_shipment_done.include?(shipment_line.shipment_id)
+      next if is_shipment_level
+      return false
+    end
+
     # Check for valid barcode locations
     unless get_valid_barcode_location(shipment_line)
       next if is_shipment_level
