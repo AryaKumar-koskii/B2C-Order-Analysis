@@ -34,7 +34,8 @@ end
 def main
   project_root = File.expand_path("..", __dir__)
   file_merger = FileMerger.new(project_root)
-  needs_merge = false
+  needs_merge = true
+  need_forward_reports_to_retry = false
 
   begin
     file_merger.merge_return_order_files if needs_merge
@@ -42,13 +43,15 @@ def main
 
     load_files
 
-    process_valid_orders_with_returns
-    process_orders_with_wrong_barcode_location_with_returns
-    process_valid_orders_without_returns
-    process_partial_valid_orders_without_returns
-    process_valid_orders_with_returns_at_shipment_level
-    process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
-    process_valid_orders_without_returns_at_shipment_level
+    if need_forward_reports_to_retry
+      process_valid_orders_with_returns
+      process_orders_with_wrong_barcode_location_with_returns
+      process_valid_orders_without_returns
+      process_partial_valid_orders_without_returns
+      process_valid_orders_with_returns_at_shipment_level
+      process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
+      process_valid_orders_without_returns_at_shipment_level
+    end
 
     puts 'Processing completed successfully!'
   rescue => e
