@@ -1,5 +1,6 @@
 require_relative 'shipments/forward_shipment'
 require_relative 'shipments/return_shipment'
+require_relative 'order_shipment_data'
 require_relative 'location'
 require_relative 'barcode_location'
 require_relative 'pending_forward'
@@ -17,6 +18,9 @@ def load_files
 
   puts 'Loading forward shipments...'
   ForwardShipment.read_from_csv("#{@project_root}/csv_files/new_merged/forward_order.csv")
+
+  p 'Loading completed shipments data...'
+  OrderShipmentData.read_from_csv("#{@project_root}/csv_files/order_shipment_data.csv")
 
   puts 'Loading return shipments...'
   ReturnShipment.read_from_csv("#{@project_root}/csv_files/new_merged/return_order.csv")
@@ -291,7 +295,6 @@ def valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
 
   valid_shipments
 end
-
 
 def get_valid_barcode_location(shipment_line)
   barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
