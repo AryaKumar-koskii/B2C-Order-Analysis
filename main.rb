@@ -36,7 +36,7 @@ def main
   project_root = File.expand_path("..", __dir__)
   file_merger = FileMerger.new(project_root)
   needs_merge = false
-  need_forward_reports_to_retry = true
+  need_forward_reports_to_retry = false
 
   begin
     file_merger.merge_return_order_files if needs_merge
@@ -45,6 +45,8 @@ def main
     load_files
 
     # pending_returns
+    pending_forwards
+
     if need_forward_reports_to_retry
       process_valid_orders_with_returns
       process_orders_with_wrong_barcode_location_with_returns
@@ -59,6 +61,12 @@ def main
   rescue => e
     puts "An error occurred: #{e.message}"
   end
+end
+
+def pending_forwards
+  puts 'all pending barcodes needs to be posted'
+  get_all_pending_barcodes
+  p "written into results/pending_deliveries_at_barcode_level.csv"
 end
 
 def process_valid_orders_with_returns
@@ -368,6 +376,27 @@ def get_partial_valid_barcodes(shipment_line)
   return false unless barcode_locations
   barcode_location = barcode_locations.find { |bl| bl.quantity == 1 }
   barcode_location if barcode_location
+end
+
+def get_all_pending_barcodes
+  shipment_barcodes = []
+  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+    forward_shipment.shipment_lines.each do |shipment_line|
+      barcode_location = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+      shipment_barcodes << {
+        fulfilment_location: shipment_line.fulfilment_location,
+        parent_order_code: forward_shipment.parent_order_id,
+        shipment_id: shipment_line.shipment_id,
+        sku: shipment_line.sku,
+        barcode: shipment_line.barcode,
+        barcode_location: barcode_location ? barcode_location[0].location : nil,
+        quantity:barcode_location ? barcode_location[0].quantity : nil,
+      }
+    end
+  end
+
+file_name = "#{@project_root}/results/pending_deliveries_at_barcode_level.csv"
+write_orders_to_text_file(shipment_barcodes, file_name)
 end
 
 def pending_returns
