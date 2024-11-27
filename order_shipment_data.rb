@@ -15,7 +15,7 @@ class OrderShipmentData
         parent_order_code = row['external_parent_order_code']
         shipment_id = row['external_shipment_id']
 
-        if row['is_completed'] == TRUE
+        if row['is_completed'] == true
           next unless PendingForward.pending?(parent_order_code)
           OrderShipmentData.new(parent_order_code, shipment_id)
         end

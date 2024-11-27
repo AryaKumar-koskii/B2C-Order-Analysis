@@ -6,7 +6,7 @@ require_relative '../location'
 require_relative 'forward_shipment'
 
 class ReturnShipment
-  attr_accessor :forward_shipment, :location, :return_order_status, :shipment_lines, :parent_order_id
+  attr_accessor :forward_shipment, :location, :return_order_code, :return_order_status, :shipment_lines, :parent_order_id
 
   # Class instance variable for looking up return shipments by forward shipment
   @return_shipments_by_forward_shipment = Hash.new { |hash, key| hash[key] = [] }
@@ -69,7 +69,8 @@ class ReturnShipment
         return_shipment = ReturnShipment.new(
           forward_shipment,
           location,
-          row['Return Order Status']
+          row['Return Order Status'],
+          row['Channel Return ID']
         )
 
         # Add shipment line
@@ -87,11 +88,12 @@ class ReturnShipment
     end
   end
 
-  def initialize(forward_shipment, location, return_order_status)
+  def initialize(forward_shipment, location, return_order_status, return_order_code)
     @forward_shipment = forward_shipment
     @location = location
     @return_order_status = return_order_status
     @parent_order_id = parent_order_id
+    @return_order_code = return_order_code
     @shipment_lines = [] # Array of ShipmentLine objects
 
     forward_shipment.add_return_shipment(self)

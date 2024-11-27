@@ -4,9 +4,10 @@ require_relative 'order_shipment_data'
 require_relative 'location'
 require_relative 'barcode_location'
 require_relative 'pending_forward'
+require_relative 'file_merger'
 require 'csv'
 require 'fileutils'
-require_relative 'file_merger'
+require 'set'
 
 def load_files
   @project_root = File.expand_path("..", __dir__)
@@ -34,8 +35,8 @@ end
 def main
   project_root = File.expand_path("..", __dir__)
   file_merger = FileMerger.new(project_root)
-  needs_merge = true
-  need_forward_reports_to_retry = false
+  needs_merge = false
+  need_forward_reports_to_retry = true
 
   begin
     file_merger.merge_return_order_files if needs_merge
@@ -43,6 +44,7 @@ def main
 
     load_files
 
+    # pending_returns
     if need_forward_reports_to_retry
       process_valid_orders_with_returns
       process_orders_with_wrong_barcode_location_with_returns
@@ -334,6 +336,23 @@ def get_partial_valid_barcodes(shipment_line)
   barcode_location if barcode_location
 end
 
+def pending_returns
+  returns = []
+  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+    return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
+    # p return_shipments unless return_shipments.empty?
+    if return_shipments.empty?
+      next
+    end
+
+    return_shipments.each do |return_shipment|
+      returns << return_shipment
+    end
+  end
+  file_name = "#{@project_root}/results/pending_return_orders.csv"
+  write_orders_to_text_file(returns, file_name, true)
+end
+
 def get_valid_forward_orders_with_returns(is_shipment_level = false)
   valid_orders = []
 
@@ -446,11 +465,20 @@ def get_partial_valid_orders_without_returns(is_shipment_level = false)
   partial_valid_orders
 end
 
-def write_orders_to_text_file(orders, file_name)
-  File.open(file_name, 'w') do |file|
-    file.puts 'Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity'
-    orders.each do |order|
-      file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:sku]},#{order[:barcode_location]},#{order[:quantity]}"
+def write_orders_to_text_file(orders, file_name, is_return = false)
+  if is_return
+    File.open(file_name, 'w') do |file|
+      file.puts 'Parent Order Code,Return Order Code,Location'
+      orders.each do |order|
+        file.puts "#{order.forward_shipment.parent_order_id},#{order.return_order_code},#{order.location.full_name}"
+      end
+    end
+  else
+    File.open(file_name, 'w') do |file|
+      file.puts 'Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity'
+      orders.each do |order|
+        file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:sku]},#{order[:barcode_location]},#{order[:quantity]}"
+      end
     end
   end
 end
