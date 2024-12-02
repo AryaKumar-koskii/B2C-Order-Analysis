@@ -5,6 +5,7 @@ require_relative 'location'
 require_relative 'barcode_location'
 require_relative 'pending_forward'
 require_relative 'file_merger'
+require_relative 'write_filtered_data'
 require 'csv'
 require 'fileutils'
 require 'set'
@@ -37,6 +38,7 @@ def main
   file_merger = FileMerger.new(project_root)
   needs_merge = false
   need_forward_reports_to_retry = false
+  need_invalid_order_data = true
 
   begin
     file_merger.merge_return_order_files if needs_merge
@@ -45,9 +47,9 @@ def main
     load_files
 
     # pending_returns
-    pending_forwards
 
     if need_forward_reports_to_retry
+      pending_forwards
       process_valid_orders_with_returns
       process_orders_with_wrong_barcode_location_with_returns
       process_valid_orders_without_returns
@@ -55,6 +57,10 @@ def main
       process_valid_orders_with_returns_at_shipment_level
       process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
       process_valid_orders_without_returns_at_shipment_level
+    end
+
+    if need_invalid_order_data
+      WriteFilteredData.run_methods
     end
 
     puts 'Processing completed successfully!'
@@ -505,7 +511,7 @@ def get_partial_valid_orders_without_returns(is_shipment_level = false)
   partial_valid_orders = []
 
   ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipment = partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level)
+    shipments = partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level)
     next unless shipment
     forward_shipment.shipment_lines.each do |shipment_line|
       barcode_location = get_partial_valid_barcodes(shipment_line)
