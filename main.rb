@@ -6,29 +6,31 @@ require_relative 'barcode_location'
 require_relative 'pending_forward'
 require_relative 'file_merger'
 require_relative 'write_filtered_data'
+require_relative 'valid_order_filters'
 require 'csv'
 require 'fileutils'
 require 'set'
 
 def load_files
   @project_root = File.expand_path("..", __dir__)
+  @result_direct = "#{@project_root}/test_results/"
   puts 'Loading location alias mapping...'
-  Location.load_locations("#{@project_root}/csv_files/location_alias_mapping.csv")
+  Location.load_locations("#{@project_root}/csv_files/support_data/location_alias_mapping.csv")
 
   puts 'Loading pending forwards...'
-  PendingForward.load_from_csv("#{@project_root}/csv_files/pending_forwards.csv")
+  PendingForward.load_from_csv("#{@project_root}/csv_files/support_data/pending_forwards.csv")
 
   puts 'Loading forward shipments...'
   ForwardShipment.read_from_csv("#{@project_root}/csv_files/new_merged/forward_order.csv")
 
   p 'Loading completed shipments data...'
-  OrderShipmentData.read_from_csv("#{@project_root}/csv_files/order_shipment_data.csv")
+  OrderShipmentData.read_from_csv("#{@project_root}/csv_files/support_data/order_shipment_data.csv")
 
   puts 'Loading return shipments...'
   ReturnShipment.read_from_csv("#{@project_root}/csv_files/new_merged/return_order.csv")
 
   puts 'Loading barcode location data...'
-  BarcodeLocation.read_from_csv("#{@project_root}/csv_files/barcode_location.csv")
+  BarcodeLocation.read_from_csv("#{@project_root}/csv_files/support_data/barcode_location.csv")
 
   puts 'Data loading completed successfully!'
 end
@@ -48,8 +50,8 @@ def main
 
     # pending_returns
 
+    pending_forwards
     if need_forward_reports_to_retry
-      pending_forwards
       process_valid_orders_with_returns
       process_orders_with_wrong_barcode_location_with_returns
       process_valid_orders_without_returns
@@ -57,6 +59,7 @@ def main
       process_valid_orders_with_returns_at_shipment_level
       process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
       process_valid_orders_without_returns_at_shipment_level
+      process_partial_valid_orders_without_returns_at_shipment_level
     end
 
     if need_invalid_order_data
@@ -72,337 +75,89 @@ end
 def pending_forwards
   puts 'all pending barcodes needs to be posted'
   get_all_pending_barcodes
-  p "written into results/pending_deliveries_at_barcode_level.csv"
+  p "written into #{@result_direct}/pending_deliveries_at_barcode_level.csv"
 end
 
 def process_valid_orders_with_returns
   puts 'Processing valid orders with returns...'
-  valid_orders = get_valid_forward_orders_with_returns
+  valid_orders = WriteFilteredData.get_valid_forward_orders_with_returns
   valid_orders.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_orders_with_wrong_barcode_location_with_returns
   puts 'Processing orders with barcode in different location with returns...'
-  sto_orders = get_orders_with_wrong_barcode_location_with_returns
+  sto_orders = WriteFilteredData.get_orders_with_wrong_barcode_location_with_returns
   sto_orders.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_valid_orders_without_returns
   puts 'Processing valid orders without returns...'
-  valid_orders_without_returns = get_orders_without_returns_at_right_location
+  valid_orders_without_returns = WriteFilteredData.get_orders_without_returns_at_right_location
   valid_orders_without_returns.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_partial_valid_orders_without_returns
   puts 'Processing partial valid orders without returns...'
-  sto_orders_without_returns = get_partial_valid_orders_without_returns
+  sto_orders_without_returns = WriteFilteredData.get_partial_valid_orders_without_returns
   sto_orders_without_returns.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_valid_orders_with_returns_at_shipment_level
   puts 'Processing valid orders with returns at shipment level...'
-  valid_orders = get_valid_forward_orders_with_returns(true)
+  valid_orders = WriteFilteredData.get_valid_forward_orders_with_returns(true)
   valid_orders.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
   puts 'Processing orders with barcode in different location with returns at shipment level...'
-  sto_orders = get_orders_with_wrong_barcode_location_with_returns(true)
+  sto_orders = WriteFilteredData.get_orders_with_wrong_barcode_location_with_returns(true)
   sto_orders.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_valid_orders_without_returns_at_shipment_level
   puts 'Processing valid orders without returns at shipment level...'
-  valid_orders_without_returns = get_orders_without_returns_at_right_location(true)
+  valid_orders_without_returns = WriteFilteredData.get_orders_without_returns_at_right_location(true)
   valid_orders_without_returns.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
 end
 
 def process_partial_valid_orders_without_returns_at_shipment_level
   puts 'Processing partial valid orders without returns at shipment level...'
-  sto_orders_without_returns = get_partial_valid_orders_without_returns(true)
+  sto_orders_without_returns = WriteFilteredData.get_partial_valid_orders_without_returns(true)
   sto_orders_without_returns.each { |order| puts order }
   puts '------------------------------------------------------------------------------'
-end
-
-def valid_forward_shipment?(forward_shipment, is_shipment_level = false)
-  valid_shipments = []
-  invalid_shipment = Set.new
-  forward_shipment.shipment_lines.each do |shipment_line|
-
-    next if invalid_shipment.include?(shipment_line.shipment_id)
-
-    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
-    if is_shipment_done.include?(shipment_line.shipment_id)
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Condition 1: Check for return shipments using parent_order_id, SKU, and barcode
-    return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
-    # p return_shipments unless return_shipments.empty?
-    if return_shipments.empty?
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Iterate over all matching return shipments
-    matching_return_found = return_shipments.any? do |return_shipment|
-      return_shipment.shipment_lines.all? { |line| line.sku == shipment_line.sku && line.barcode == shipment_line.barcode }
-    end
-    unless matching_return_found
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Condition 2: Barcode location should match the fulfillment location
-    barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-    unless barcode_locations && barcode_locations.all? { |bl| bl.location == shipment_line.fulfilment_location }
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Condition 3: Validate quantity for the barcode in the location
-    barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
-    unless barcode_location && barcode_location.quantity == 1
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Condition 5: Ensure return exists at barcode level for any of the return shipments
-    return_shipment_barcode_match = return_shipments.any? do |return_shipment|
-      return_shipment.shipment_lines.all? { |line| line.barcode == shipment_line.barcode }
-    end
-    unless return_shipment_barcode_match
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    valid_shipments << shipment_line.shipment_id
-
-  end
-  return true unless is_shipment_level
-  return false if valid_shipments.empty?
-
-  valid_shipments
-end
-
-def partial_valid_shipment?(forward_shipment, is_shipment_level = false)
-  valid_shipments = []
-  invalid_shipment = Set.new
-  forward_shipment.shipment_lines.each do |shipment_line|
-
-    next if invalid_shipment.include?(shipment_line.shipment_id)
-
-    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
-    if is_shipment_done.include?(shipment_line.shipment_id)
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Check for return shipments for the current forward shipment
-    return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
-    if return_shipments.empty?
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
-    unless forward_shipments.count > 1
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Get all locations for the barcode
-    barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-    unless barcode_locations
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Ensure that at least one return shipment matches the barcode
-    matching_return_found = return_shipments.any? do |return_shipment|
-      return_shipment.shipment_lines.any? { |line| line.barcode == shipment_line.barcode }
-    end
-    unless matching_return_found
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    if barcode_locations.size > 1
-      if barcode_locations.none? { |bl| bl.quantity == 0 }
-        invalid_shipment << shipment_line.shipment_id
-        next if is_shipment_level
-        return false
-      end
-
-      barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
-      if barcode_location && (barcode_location.quantity < 0 || barcode_location.quantity > 1)
-        invalid_shipment << shipment_line.shipment_id
-        next if is_shipment_level
-        return false
-      end
-    end
-
-    # Validate if the barcode has a valid quantity in any location
-    valid_quantity_location = barcode_locations.find { |bl| bl.quantity == 1 }
-    unless valid_quantity_location
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    valid_shipments << shipment_line.shipment_id
-  end
-
-  return true unless is_shipment_level
-  return false if valid_shipments.empty?
-
-  valid_shipments
-end
-
-def partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
-  valid_shipments = []
-  invalid_shipment = Set.new
-  forward_shipment.shipment_lines.each do |shipment_line|
-    return false if shipment_line.barcode.nil?
-
-    next if invalid_shipment.include?(shipment_line.shipment_id)
-
-    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
-    if is_shipment_done.include?(shipment_line.shipment_id)
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-    unless barcode_locations
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
-    unless forward_shipments.count > 1
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    if barcode_locations.size > 1
-      barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
-      if barcode_location && (barcode_location.quantity < 0 || barcode_location.quantity > 1)
-        invalid_shipment << shipment_line.shipment_id
-        next if is_shipment_level
-        return false
-      end
-    end
-
-    # Validate if the barcode has a valid quantity in any location
-    valid_quantity_location = barcode_locations.find { |bl| bl.quantity == 1 }
-    unless valid_quantity_location
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    valid_shipments << forward_shipment
-  end
-
-  return true unless is_shipment_level
-  return false if valid_shipments.empty?
-
-  valid_shipments
-end
-
-def valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
-  valid_shipments = []
-  invalid_shipment = Set.new
-  forward_shipment.shipment_lines.each do |shipment_line|
-
-    next if invalid_shipment.include?(shipment_line.shipment_id)
-
-    is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
-    if is_shipment_done.include?(shipment_line.shipment_id)
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Check for valid barcode locations
-    unless get_valid_barcode_location(shipment_line)
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    # Check if the barcode is associated with multiple shipments
-    if ForwardShipment.find_by_barcode(shipment_line.barcode).size > 1
-      invalid_shipment << shipment_line.shipment_id
-      next if is_shipment_level
-      return false
-    end
-
-    valid_shipments << shipment_line.shipment_id
-  end
-
-  return true unless is_shipment_level
-  return false if valid_shipments.empty?
-
-  valid_shipments
-end
-
-def get_valid_barcode_location(shipment_line)
-  barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-  return false unless barcode_locations
-  barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
-  barcode_location if barcode_location && barcode_location.quantity == 1
-end
-
-def get_partial_valid_barcodes(shipment_line)
-  barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-  return false unless barcode_locations
-  barcode_location = barcode_locations.find { |bl| bl.quantity == 1 }
-  barcode_location if barcode_location
 end
 
 def get_all_pending_barcodes
   shipment_barcodes = []
   ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
     forward_shipment.shipment_lines.each do |shipment_line|
-      barcode_location = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-      shipment_barcodes << {
-        fulfilment_location: shipment_line.fulfilment_location,
-        parent_order_code: forward_shipment.parent_order_id,
-        shipment_id: shipment_line.shipment_id,
-        sku: shipment_line.sku,
-        barcode: shipment_line.barcode,
-        barcode_location: barcode_location ? barcode_location[0].location : nil,
-        quantity:barcode_location ? barcode_location[0].quantity : nil,
-      }
+      shipments = OrderShipmentData.shipment_data_by_parent_order_code[forward_shipment.parent_order_id]
+      unless shipments.include? shipment_line.shipment_id
+        # return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
+        # next unless return_shipments.empty?
+        barcode_location = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+        shipment_barcodes << {
+          fulfilment_location: shipment_line.fulfilment_location,
+          parent_order_code: forward_shipment.parent_order_id,
+          shipment_id: shipment_line.shipment_id,
+          sku: shipment_line.sku,
+          barcode: shipment_line.barcode,
+          barcode_location: barcode_location ? barcode_location[0].location : nil,
+          quantity: barcode_location ? barcode_location[0].quantity : nil,
+        }
+      end
     end
   end
 
-file_name = "#{@project_root}/results/pending_deliveries_at_barcode_level.csv"
-write_orders_to_text_file(shipment_barcodes, file_name)
+  file_name = "#{@result_direct}pending_deliveries_at_barcode_level.csv"
+  WriteFilteredData.write_orders_to_text_file(shipment_barcodes, file_name)
 end
 
 def pending_returns
@@ -418,138 +173,8 @@ def pending_returns
       returns << return_shipment
     end
   end
-  file_name = "#{@project_root}/results/pending_return_orders.csv"
-  write_orders_to_text_file(returns, file_name, true)
-end
-
-def get_valid_forward_orders_with_returns(is_shipment_level = false)
-  valid_orders = []
-
-  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipments = valid_forward_shipment?(forward_shipment, is_shipment_level)
-    next unless shipments
-    forward_shipment.shipment_lines.each do |shipment_line|
-      barcode_location = get_valid_barcode_location(shipment_line)
-      next unless barcode_location
-      if is_shipment_level and shipments.include?(shipment_line.shipment_id)
-        valid_orders << {
-          fulfilment_location: shipment_line.fulfilment_location,
-          parent_order_code: forward_shipment.parent_order_id,
-          shipment_id: shipment_line.shipment_id,
-          sku: shipment_line.sku,
-          barcode: shipment_line.barcode,
-          barcode_location: barcode_location.location,
-          quantity: barcode_location.quantity
-        }
-      end
-    end
-  end
-
-  file_name = "#{@project_root}/results/valid_orders#{'(shipment_level)' if is_shipment_level}.csv"
-  write_orders_to_text_file(valid_orders, file_name)
-  valid_orders
-end
-
-def get_orders_with_wrong_barcode_location_with_returns(is_shipment_level = false)
-  partial_availability_orders = []
-
-  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipment = partial_valid_shipment?(forward_shipment, is_shipment_level)
-    next unless shipment
-    forward_shipment.shipment_lines.each do |shipment_line|
-      barcode_location = get_partial_valid_barcodes(shipment_line)
-      next unless barcode_location
-      if is_shipment_level and shipment.include?(shipment_line.shipment_id)
-        partial_availability_orders << {
-          fulfilment_location: shipment_line.fulfilment_location,
-          parent_order_code: forward_shipment.parent_order_id,
-          shipment_id: shipment_line.shipment_id,
-          sku: shipment_line.sku,
-          barcode: shipment_line.barcode,
-          barcode_location: barcode_location.location,
-          quantity: barcode_location.quantity
-        }
-      end
-    end
-  end
-
-  file_name = "#{@project_root}/results/partial_availability_orders.csv#{'(shipment_level)' if is_shipment_level}.csv"
-  write_orders_to_text_file(partial_availability_orders, file_name)
-  partial_availability_orders
-end
-
-def get_orders_without_returns_at_right_location(is_shipment_level = false)
-  forwards_without_returns = []
-
-  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipments = valid_shipment_without_returns?(forward_shipment, is_shipment_level)
-    next unless shipments
-    forward_shipment.shipment_lines.each do |shipment_line|
-      barcode_location = get_valid_barcode_location(shipment_line)
-      next unless barcode_location
-      if is_shipment_level and shipments.include?(shipment_line.shipment_id)
-        forwards_without_returns << {
-          fulfilment_location: shipment_line.fulfilment_location,
-          parent_order_code: forward_shipment.parent_order_id,
-          shipment_id: shipment_line.shipment_id,
-          sku: shipment_line.sku,
-          barcode: shipment_line.barcode,
-          barcode_location: barcode_location.location,
-          quantity: barcode_location.quantity
-        }
-      end
-    end
-  end
-
-  file_name = "#{@project_root}/results/forwards_without_returns#{'(shipment_level)' if is_shipment_level}.csv"
-
-  write_orders_to_text_file(forwards_without_returns, file_name)
-  forwards_without_returns
-end
-
-def get_partial_valid_orders_without_returns(is_shipment_level = false)
-  partial_valid_orders = []
-
-  ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-    shipments = partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level)
-    next unless shipment
-    forward_shipment.shipment_lines.each do |shipment_line|
-      barcode_location = get_partial_valid_barcodes(shipment_line)
-      next unless barcode_location
-      if is_shipment_level and shipments.include?(shipment_line.shipment_id)
-        partial_valid_orders << {
-          fulfilment_location: shipment_line.fulfilment_location,
-          parent_order_code: forward_shipment.parent_order_id,
-          shipment_id: shipment_line.shipment_id,
-          sku: shipment_line.sku,
-          barcode: shipment_line.barcode,
-          barcode_location: barcode_location.location,
-          quantity: barcode_location.quantity
-        }
-      end
-    end
-  end
-
-  write_orders_to_text_file(partial_valid_orders, "#{@project_root}/results/partial_valid_orders_without_returns.csv")
-  partial_valid_orders
-end
-
-def write_orders_to_text_file(orders, file_name, is_return = false)
-  if is_return
-    File.open(file_name, 'w') do |file|
-      file.puts 'Parent Order Code,Return Order Code,Location'
-      orders.each do |order|
-        file.puts "#{order.forward_shipment.parent_order_id},#{order.return_order_code},#{order.location.full_name}"
-      end
-    end
-  else
-    File.open(file_name, 'w') do |file|
-      file.puts 'Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity'
-      orders.each do |order|
-        file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:sku]},#{order[:barcode_location]},#{order[:quantity]}"
-      end
-    end
-  end
+  file_name = "#{@result_direct}pending_return_orders.csv"
+  WriteFilteredData.write_orders_to_text_file(returns, file_name, true)
 end
 
 main

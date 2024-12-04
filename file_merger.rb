@@ -42,7 +42,7 @@ class FileMerger
     merge_shipped_order
     merge_sfs_order
 
-    parent_order_mapping = ParentOrderMapping.new('../csv_files/forward_Parent_order_code_mapping.csv')
+    parent_order_mapping = ParentOrderMapping.new('../csv_files/support_data/forward_Parent_order_code_mapping.csv')
     file1_path = File.join(project_root, 'csv_files/new_merged/SFS_outward.csv')
     file2_path = File.join(project_root, 'csv_files/new_merged/WMS_outward.csv')
     output_file = File.join(project_root, 'csv_files/new_merged/forward_order.csv')

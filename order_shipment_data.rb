@@ -17,7 +17,7 @@ class OrderShipmentData
 
         if row['is_completed'] == true
           next unless PendingForward.pending?(parent_order_code)
-          OrderShipmentData.new(parent_order_code, shipment_id)
+          OrderShipmentData.new(parent_order_code, shipment_id.to_s)
         end
       end
 

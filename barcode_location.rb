@@ -7,7 +7,9 @@ class BarcodeLocation
     attr_accessor :location_by_barcode
 
     def find_by_barcode(barcode)
-      @location_by_barcode[barcode]
+      if barcode
+        @location_by_barcode[barcode.upcase]
+      end
     end
 
     def all
@@ -25,7 +27,7 @@ class BarcodeLocation
 
   def initialize(location, barcode, product, quantity)
     @location = location
-    @barcode = barcode
+    @barcode = barcode ? barcode.upcase : barcode
     @product = product
     @quantity = quantity
   end
@@ -35,7 +37,7 @@ class BarcodeLocation
     CSV.foreach(file_path, headers: true) do |row|
       location_with_stock = row['Location']
 
-      if ['KSB/Stock', 'Physical Locations/Inter-warehouse transit'].include?(location_with_stock)
+      if ['Physical Locations/Inter-warehouse transit'].include?(location_with_stock)
         next
       end
       location_alias = location_with_stock.gsub('/Stock', '') # Remove "/Stock"
@@ -45,7 +47,7 @@ class BarcodeLocation
 
       barcode_location = BarcodeLocation.new(
         location.full_name,
-        row['Lot/Serial Number'],
+        row['Lot/Serial Number'].upcase,
         parse_product(row['Product']),
         row['Quantity'].to_i
       )

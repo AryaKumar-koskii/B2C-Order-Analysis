@@ -70,7 +70,7 @@ class ReturnShipment
           forward_shipment,
           location,
           row['Return Order Status'],
-          row['Channel Return ID']
+          row['Channel Return ID'].to_s
         )
 
         # Add shipment line
