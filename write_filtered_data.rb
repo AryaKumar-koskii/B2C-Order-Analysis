@@ -91,7 +91,13 @@ class WriteFilteredData
         forward_shipment.shipment_lines.each do |shipment_line|
           barcode_location = ValidOrderFilters.get_valid_barcode_location(shipment_line)
           next unless barcode_location
-          if is_shipment_level and shipments.include?(shipment_line.shipment_id)
+          if is_shipment_level
+            should_add = shipments.include?(shipment_line.shipment_id)
+          else
+            should_add = shipments
+          end
+
+          if should_add
             valid_orders << {
               fulfilment_location: shipment_line.fulfilment_location,
               parent_order_code: forward_shipment.parent_order_id,
@@ -114,12 +120,18 @@ class WriteFilteredData
       partial_availability_orders = []
 
       ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
-        shipment = ValidOrderFilters.partial_valid_shipment?(forward_shipment, is_shipment_level)
-        next unless shipment
+        shipments = ValidOrderFilters.partial_valid_shipment?(forward_shipment, is_shipment_level)
+        next unless shipments
         forward_shipment.shipment_lines.each do |shipment_line|
           barcode_location = ValidOrderFilters.get_partial_valid_barcodes(shipment_line)
           next unless barcode_location
-          if is_shipment_level and shipment.include?(shipment_line.shipment_id)
+          if is_shipment_level
+            should_add = shipments.include?(shipment_line.shipment_id)
+          else
+            should_add = shipments
+          end
+
+          if should_add
             partial_availability_orders << {
               fulfilment_location: shipment_line.fulfilment_location,
               parent_order_code: forward_shipment.parent_order_id,
@@ -147,7 +159,14 @@ class WriteFilteredData
         forward_shipment.shipment_lines.each do |shipment_line|
           barcode_location = ValidOrderFilters.get_valid_barcode_location(shipment_line)
           next unless barcode_location
-          if is_shipment_level and shipments.include?(shipment_line.shipment_id)
+
+          if is_shipment_level
+            should_add = shipments.include?(shipment_line.shipment_id)
+          else
+            should_add = shipments
+          end
+
+          if should_add
             forwards_without_returns << {
               fulfilment_location: shipment_line.fulfilment_location,
               parent_order_code: forward_shipment.parent_order_id,
@@ -176,7 +195,13 @@ class WriteFilteredData
         forward_shipment.shipment_lines.each do |shipment_line|
           barcode_location = ValidOrderFilters.get_partial_valid_barcodes(shipment_line)
           next unless barcode_location
-          if is_shipment_level and shipments.include?(shipment_line.shipment_id)
+          if is_shipment_level
+            should_add = shipments.include?(shipment_line.shipment_id)
+          else
+            should_add = shipments
+          end
+
+          if should_add
             partial_valid_orders << {
               fulfilment_location: shipment_line.fulfilment_location,
               parent_order_code: forward_shipment.parent_order_id,
