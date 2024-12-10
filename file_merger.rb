@@ -1,6 +1,7 @@
 require 'csv'
 require 'fileutils'
 require_relative 'parent_order_mapping'
+
 class FileMerger
   attr_reader :project_root
 
@@ -19,11 +20,12 @@ class FileMerger
   end
 
   def merge_sfs_order
+    customisation_skus = %w[GCSS_TS_IN GCSS_TS_US SAPFUS_TS_US SAPF_TS_US SARM_TS_US SAUS_TS_IN SAUS_TS_US SERVICE SSUS_TS_IN SSUS_TS_US T1000 T1200 T123456 T123457 T123458 T123459 T123460 T123461 T123462 T123463 T123464 T123465 T123466 T123467 T123468 T123469 T123470 T123471 T123472 T123473 T123474 T123475 T123476 T123477 T123478 T123479 T123480 T123481 T123482 T1400 T1500 T2000 T250 T300 T400 T500 T600 T700 T800]
     input_directory = File.join(project_root, 'csv_files', 'SFS_outward')
     output_file = File.join(project_root, 'csv_files/new_merged', 'SFS_outward.csv')
 
     required_columns = ['Channel ID', 'SFS/USP Order Status']
-    filter_conditions = ->(row) { row['Channel ID'] != 'SHOPIFYUS' && ['PACKED', 'COMPLETED', 'PICKING_COMPLETED'].include?(row['SFS/USP Order Status']) }
+    filter_conditions = ->(row) { !(customisation_skus.include?(row['Client SKU ID'])) && ['PACKED', 'COMPLETED', 'PICKING_COMPLETED'].include?(row['SFS/USP Order Status']) }
 
     process_csv_files(input_directory, output_file, required_columns, filter_conditions)
   end
