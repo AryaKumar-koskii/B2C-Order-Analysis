@@ -30,10 +30,6 @@ class ForwardShipment
         # Only process if the forward order is pending
         next unless PendingForward.pending?(forward_order_id)
 
-        if forward_order_id == 'KO228986'
-          true
-        end
-
         location_name = row['Fulfilment Location Name'] || row['Fulfillment Location Name']
         location = Location.find_by_full_name(location_name)
         unless location
@@ -44,9 +40,7 @@ class ForwardShipment
         # Create or retrieve the existing forward shipment
         shipment_id = row['Shipment ID'].to_s
         forward_order = self.forward_shipments_by_parent_id[parent_order_id]
-       if shipment_id == '202345' or parent_order_id == '2572038a-f443-4bdc-bbbc-c2ac0c509636'
-         p shipment_id
-       end
+
         unless forward_order
           forward_order = ForwardShipment.new(location, forward_order_id,
                                                  parent_order_id,

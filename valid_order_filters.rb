@@ -163,6 +163,13 @@ class ValidOrderFilters
 
       next if invalid_shipment.include?(shipment_line.shipment_id)
 
+      return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
+      unless return_shipments.empty?
+        invalid_shipment << shipment_line.shipment_id
+        next if is_shipment_level
+        return false
+      end
+
       is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)
         invalid_shipment << shipment_line.shipment_id
@@ -216,6 +223,13 @@ class ValidOrderFilters
     forward_shipment.shipment_lines.each do |shipment_line|
 
       next if invalid_shipment.include?(shipment_line.shipment_id)
+
+      return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
+      unless return_shipments.empty?
+        invalid_shipment << shipment_line.shipment_id
+        next if is_shipment_level
+        return false
+      end
 
       is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)

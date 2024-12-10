@@ -10,10 +10,14 @@ class InvalidOrderFilters
   def self.get_orders_with_multiple_barcodes(with_returns = false)
     invalid_orders = Set.new
     ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+
       completed_shipments = OrderShipmentData.shipment_data_by_parent_order_code[forward_shipment.parent_order_id]
+
       if forward_shipment.shipment_lines.size > 1
         forward_shipment.shipment_lines.each do |shipment_line|
+
           next if completed_shipments.include? shipment_line.shipment_id
+
           barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
           next unless barcode_locations.nil?
 
@@ -30,10 +34,14 @@ class InvalidOrderFilters
   def self.get_orders_with_no_barcodes(with_returns = false)
     invalid_orders = Set.new
     ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+
       completed_shipments = OrderShipmentData.shipment_data_by_parent_order_code[forward_shipment.parent_order_id]
+
       if forward_shipment.shipment_lines.size == 1
         forward_shipment.shipment_lines.each do |shipment_line|
+
           next if completed_shipments.include? shipment_line.shipment_id
+
           barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
           next unless barcode_locations.nil?
 
