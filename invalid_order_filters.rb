@@ -19,7 +19,7 @@ class InvalidOrderFilters
           next if completed_shipments.include? shipment_line.shipment_id
 
           barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-          next unless barcode_locations.nil?
+          next unless barcode_locations.nil? || invalid_barcode(barcode_locations)
 
           return_shipments = ReturnShipment.find_by_forward_shipment(forward_shipment)
           next if with_returns == return_shipments.empty?
@@ -53,6 +53,21 @@ class InvalidOrderFilters
       end
     end
     invalid_orders
+  end
+
+  def self.invalid_barcode(barcode_locations)
+    if barcode_locations.size > 1 || barcode_locations.first.quantity != 1
+      true
+    else
+      false
+    end
+  end
+
+  def self.get_valid_barcode_location(shipment_line)
+    barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+    return false unless barcode_locations
+    barcode_location = barcode_locations.find { |bl| bl.location == shipment_line.fulfilment_location }
+    barcode_location if barcode_location && barcode_location.quantity == 1
   end
 
 
