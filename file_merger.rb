@@ -12,6 +12,8 @@ class FileMerger
   def merge_shipped_order
     input_directory = File.join(project_root, 'csv_files', 'WMS_outward')
     output_file = File.join(project_root, 'csv_files/new_merged', 'WMS_outward.csv')
+    # input_directory = File.join(project_root, 'temp', 'WMS_outward')
+    # output_file = File.join(project_root, 'temp/merged', 'WMS_outward.csv')
 
     required_columns = ['Pack Type', 'Order Type']
     filter_conditions = ->(row) { row['Pack Type'] == 'B2C' && row['Order Type'] == 'SALES' }
@@ -23,6 +25,8 @@ class FileMerger
     customisation_skus = %w[GCSS_TS_IN GCSS_TS_US SAPFUS_TS_US SAPF_TS_US SARM_TS_US SAUS_TS_IN SAUS_TS_US SERVICE SSUS_TS_IN SSUS_TS_US T1000 T1200 T123456 T123457 T123458 T123459 T123460 T123461 T123462 T123463 T123464 T123465 T123466 T123467 T123468 T123469 T123470 T123471 T123472 T123473 T123474 T123475 T123476 T123477 T123478 T123479 T123480 T123481 T123482 T1400 T1500 T2000 T250 T300 T400 T500 T600 T700 T800]
     input_directory = File.join(project_root, 'csv_files', 'SFS_outward')
     output_file = File.join(project_root, 'csv_files/new_merged', 'SFS_outward.csv')
+    # input_directory = File.join(project_root, 'temp', 'SFS_outward')
+    # output_file = File.join(project_root, 'temp/merged', 'SFS_outward.csv')
 
     required_columns = ['Channel ID', 'SFS/USP Order Status']
     filter_conditions = ->(row) { !(customisation_skus.include?(row['Client SKU ID'])) && ['PACKED', 'COMPLETED', 'PICKING_COMPLETED'].include?(row['SFS/USP Order Status']) }
@@ -48,6 +52,10 @@ class FileMerger
     file1_path = File.join(project_root, 'csv_files/new_merged/SFS_outward.csv')
     file2_path = File.join(project_root, 'csv_files/new_merged/WMS_outward.csv')
     output_file = File.join(project_root, 'csv_files/new_merged/forward_order.csv')
+
+    # file1_path = File.join(project_root, 'temp/merged/SFS_outward.csv')
+    # file2_path = File.join(project_root, 'temp/merged/WMS_outward.csv')
+    # output_file = File.join(project_root, 'temp/merged/jan_forward_order.csv')
 
     begin
       df1 = CSV.read(file1_path, headers: true).map(&:to_hash)
