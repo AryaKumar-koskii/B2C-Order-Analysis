@@ -26,9 +26,16 @@ class ForwardShipment
       CSV.foreach(file_path, headers: true) do |row|
         forward_order_id = row['Parent Order ID']
         parent_order_id = row['Parent Order ID']
+        shipment_id = row['Shipment ID'].to_s
+
+        completed_shipments = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(parent_order_id)
+        if completed_shipments&.include?(shipment_id)
+          next
+        end
 
         # Only process if the forward order is pending
-        next unless PendingForward.pending?(forward_order_id)
+        # next unless PendingForward.pending?(forward_order_id)
+        # next if  row['External Item Code'].nil?
 
         location_name = row['Fulfilment Location Name'] || row['Fulfillment Location Name']
         location = Location.find_by_full_name(location_name)
@@ -38,7 +45,6 @@ class ForwardShipment
         end
 
         # Create or retrieve the existing forward shipment
-        shipment_id = row['Shipment ID'].to_s
         forward_order = self.forward_shipments_by_parent_id[parent_order_id]
 
         unless forward_order

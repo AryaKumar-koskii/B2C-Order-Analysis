@@ -10,8 +10,8 @@ class WriteFilteredData
 
     @project_root = File.expand_path("..", __dir__)
     @result_direct = "#{@project_root}/test_results/"
-  class << self
 
+  class << self
 
     def run_methods
       invalid_single_barcode_orders
@@ -44,9 +44,9 @@ class WriteFilteredData
         end
       end
       if with_returns
-        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/single_barcode_with_returns.csv")
+        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/with_returns/single_barcode_with_returns.csv")
       else
-        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/single_barcode_without_returns.csv")
+        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/without_returns/single_barcode_without_returns.csv")
       end
       invalid_orders_data
     end
@@ -75,9 +75,9 @@ class WriteFilteredData
         end
       end
       if with_returns
-        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/multiple_barcode_with_returns.csv")
+        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/with_returns/multiple_barcode_with_returns.csv")
       else
-        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/multiple_barcode_without_returns.csv")
+        write_orders_to_text_file(invalid_orders_data, "#{@result_direct}invalid_orders/without_returns//multiple_barcode_without_returns.csv")
       end
       invalid_orders_data
     end
@@ -145,7 +145,7 @@ class WriteFilteredData
         end
       end
 
-      file_name = "#{@result_direct}partial_availability_orders.csv#{'(shipment_level)' if is_shipment_level}.csv"
+      file_name = "#{@result_direct}needs_sto/partial_availability_orders#{'(shipment_level)' if is_shipment_level}.csv"
       write_orders_to_text_file(partial_availability_orders, file_name)
       partial_availability_orders
     end
@@ -215,23 +215,37 @@ class WriteFilteredData
         end
       end
 
-      write_orders_to_text_file(partial_valid_orders, "#{@result_direct}partial_valid_orders_without_returns.csv")
+      write_orders_to_text_file(partial_valid_orders, "#{@result_direct}needs_sto/partial_valid_orders_without_returns.csv")
       partial_valid_orders
     end
 
     def write_orders_to_text_file(orders, file_name, is_return = false)
       if is_return
-        File.open(file_name, 'w') do |file|
-          file.puts 'Parent Order Code,Return Order Code,Location'
-          orders.each do |order|
-            file.puts "#{order.forward_shipment.parent_order_id},#{order.return_order_code},#{order.location.full_name}"
-          end
-        end
+        headers = ['Parent Order Code', 'Return Order Code', 'Location']
       else
-        File.open(file_name, 'w') do |file|
-          file.puts 'Fulfilment Location,Parent Order Code,Shipment ID,Barcode,SKU,Barcode Location,Quantity'
+        headers = ['Fulfilment Location', 'Parent Order Code', 'Shipment ID', 'Barcode', 'SKU', 'Barcode Location', 'Quantity']
+      end
+
+      CSV.open(file_name, 'w', write_headers: true, headers: headers) do |csv|
+        if is_return
           orders.each do |order|
-            file.puts "#{order[:fulfilment_location]},#{order[:parent_order_code]},#{order[:shipment_id]},#{order[:barcode]},#{order[:sku]},#{order[:barcode_location]},#{order[:quantity]}"
+            csv << [
+              order.forward_shipment.parent_order_id,
+              order.return_order_code,
+              order.location.full_name
+            ]
+          end
+        else
+          orders.each do |order|
+            csv << [
+              order[:fulfilment_location],
+              order[:parent_order_code],
+              order[:shipment_id],
+              order[:barcode],
+              order[:sku],
+              order[:barcode_location],
+              order[:quantity]
+            ]
           end
         end
       end

@@ -42,7 +42,7 @@ class ValidOrderFilters
 
       # Condition 2: Barcode location should match the fulfillment location
       barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
-      unless barcode_locations && barcode_locations.all? { |bl| bl.location == shipment_line.fulfilment_location }
+      unless barcode_locations && barcode_locations.any? { |bl| (bl.location == shipment_line.fulfilment_location) and (bl.quantity == 1) }
         invalid_shipment << shipment_line.shipment_id
         next if is_shipment_level
         return false
@@ -103,6 +103,13 @@ class ValidOrderFilters
         next if is_shipment_level
         return false
       end
+
+      # forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
+      # unless forward_shipments.count > 1
+      #   invalid_shipment << shipment_line.shipment_id
+      #   next if is_shipment_level
+      #   return false
+      # end
 
       # Get all locations for the barcode
       barcode_locations = BarcodeLocation.find_by_barcode(shipment_line.barcode)
