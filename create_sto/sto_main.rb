@@ -56,10 +56,10 @@ end
 
 def load_file
   p 'loading location_mapping file'
-  Location.load_locations('../csv_files/location_alias_mapping.csv')
+  Location.load_locations('../csv_files/support_data/location_alias_mapping.csv')
 
   p 'loading file to create STO'
-  ReadSTOFile.read_from_csv('../results/partial_availability_orders.csv')
+  ReadSTOFile.read_from_csv('../test_results/partial_availability_orders.csv')
 end
 
 def write_successful_stos_to_csv(sto_records, csv_file_path, response)
