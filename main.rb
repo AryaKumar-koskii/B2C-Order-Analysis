@@ -24,7 +24,7 @@ def load_files
   ForwardShipment.read_from_csv("#{@project_root}/csv_files/new_merged/forward_order.csv")
 
   p 'Loading completed shipments data...'
-  OrderShipmentData.read_from_csv("#{@project_root}/csv_files/support_data/order_shipment_data.csv")
+  OrderShipmentData.read_from_csv("#{@project_root}/csv_files/support_data/completed_shipments.csv")
 
   puts 'Loading return shipments...'
   ReturnShipment.read_from_csv("#{@project_root}/csv_files/new_merged/return_order.csv")
@@ -149,7 +149,15 @@ def get_all_pending_barcodes
           shipment_id: shipment_line.shipment_id,
           sku: shipment_line.sku,
           barcode: shipment_line.barcode,
-          barcode_location: barcode_location ? barcode_location[0].location : nil,
+          barcode_location: if barcode_location
+                              if barcode_location.size > 1
+                                "barcode in multiple location"
+                              else
+                                barcode_location.first.location
+                              end
+                            else
+                              nil
+                            end,
           quantity: barcode_location ? barcode_location[0].quantity : nil,
         }
       end

@@ -15,16 +15,15 @@ class OrderShipmentData
         parent_order_code = row['external_parent_order_code']
         shipment_id = row['external_shipment_id']
 
-        if row['is_completed'] == true
-          next unless PendingForward.pending?(parent_order_code)
+        if row['state'] == 'done'
           OrderShipmentData.new(parent_order_code, shipment_id.to_s)
         end
       end
 
-      def find_by_parent_order_coder_and_shipment_code(parent_order_code)
-        @shipment_data_by_parent_order_code[parent_order_code]
-      end
 
+    end
+    def find_by_parent_order_coder_and_shipment_code(parent_order_code)
+      @shipment_data_by_parent_order_code[parent_order_code]
     end
   end
 
