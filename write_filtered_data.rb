@@ -5,11 +5,12 @@ require_relative 'barcode_location'
 require_relative './shipments/forward_shipment'
 require_relative './shipments/return_shipment'
 require_relative 'invalid_order_filters'
+require_relative 'const'
 
 class WriteFilteredData
 
-    @project_root = File.expand_path("..", __dir__)
-    @result_direct = "#{@project_root}/test_results/"
+    @project_root = Const::PROJECT_ROOT
+    @result_direct = Const::RESULT_DIRECT
 
   class << self
 

@@ -97,13 +97,6 @@ class ValidOrderFilters
         return false
       end
 
-      forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
-      unless forward_shipments.count > 1
-        invalid_shipment << shipment_line.shipment_id
-        next if is_shipment_level
-        return false
-      end
-
       # forward_shipments = ForwardShipment.find_by_barcode(shipment_line.barcode)
       # unless forward_shipments.count > 1
       #   invalid_shipment << shipment_line.shipment_id
