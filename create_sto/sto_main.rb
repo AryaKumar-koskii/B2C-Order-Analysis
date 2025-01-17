@@ -9,7 +9,7 @@ require 'time'
 require 'date'
 
 def send_api_request(payload)
-  uri = URI.parse(ODOO_LOCAL)
+  uri = URI.parse(ODOO_PROD)
 
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true # True if https

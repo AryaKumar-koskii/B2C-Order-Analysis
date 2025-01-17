@@ -7,13 +7,14 @@ require_relative 'pending_forward'
 require_relative 'file_merger'
 require_relative 'write_filtered_data'
 require_relative 'valid_order_filters'
+require_relative 'Const'
+require_relative 'shipments/fetch_completed_shipments'
 require 'csv'
 require 'fileutils'
 require 'set'
 
 def load_files
-  @project_root = File.expand_path("..", __dir__)
-  @result_direct = "#{@project_root}/test_results/"
+
   puts 'Loading location alias mapping...'
   Location.load_locations("#{@project_root}/csv_files/support_data/location_alias_mapping.csv")
 
@@ -36,15 +37,19 @@ def load_files
 end
 
 def main
-  project_root = File.expand_path("..", __dir__)
-  file_merger = FileMerger.new(project_root)
+  @project_root =Const::PROJECT_ROOT
+  @result_direct = Const::RESULT_DIRECT
+
+  fetch_completed_shipments = false
   needs_merge = false
-  need_forward_reports_to_retry = false
-  need_invalid_order_data = true
+  need_forward_reports_to_retry = true
+  need_invalid_order_data = false
 
   begin
     file_merger.merge_return_order_files if needs_merge
     file_merger.merge_order_files if needs_merge
+
+    FetchCompletedShipments.fetch_completed_shipments if fetch_completed_shipments
 
     load_files
 
