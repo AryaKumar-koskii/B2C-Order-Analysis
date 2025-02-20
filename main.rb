@@ -12,6 +12,7 @@ require_relative 'shipments/fetch_completed_shipments'
 require 'csv'
 require 'fileutils'
 require 'set'
+require 'date'
 
 def load_files
 
@@ -40,12 +41,13 @@ def main
   @project_root =Const::PROJECT_ROOT
   @result_direct = Const::RESULT_DIRECT
 
-  fetch_completed_shipments = false
   needs_merge = false
+  fetch_completed_shipments = true
   need_forward_reports_to_retry = true
-  need_invalid_order_data = false
+  need_invalid_order_data = true
 
   begin
+    file_merger = FileMerger.new(@project_root)
     file_merger.merge_return_order_files if needs_merge
     file_merger.merge_order_files if needs_merge
 
@@ -56,6 +58,7 @@ def main
     # pending_returns
 
     pending_forwards
+    find_partially_completed_orders
     if need_forward_reports_to_retry
       process_valid_orders_with_returns
       process_orders_with_wrong_barcode_location_with_returns
@@ -71,7 +74,7 @@ def main
       WriteFilteredData.run_methods
     end
 
-    puts 'Processing completed successfully!'
+    puts "Processing completed successfully!#{Time.now}"
   rescue => e
     puts "An error occurred: #{e.message}"
   end
@@ -87,6 +90,7 @@ def process_valid_orders_with_returns
   puts 'Processing valid orders with returns...'
   valid_orders = WriteFilteredData.get_valid_forward_orders_with_returns
   valid_orders.each { |order| puts order }
+  p valid_orders.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -94,6 +98,7 @@ def process_orders_with_wrong_barcode_location_with_returns
   puts 'Processing orders with barcode in different location with returns...'
   sto_orders = WriteFilteredData.get_orders_with_wrong_barcode_location_with_returns
   sto_orders.each { |order| puts order }
+  p sto_orders.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -101,6 +106,7 @@ def process_valid_orders_without_returns
   puts 'Processing valid orders without returns...'
   valid_orders_without_returns = WriteFilteredData.get_orders_without_returns_at_right_location
   valid_orders_without_returns.each { |order| puts order }
+  p valid_orders_without_returns.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -108,6 +114,7 @@ def process_partial_valid_orders_without_returns
   puts 'Processing partial valid orders without returns...'
   sto_orders_without_returns = WriteFilteredData.get_partial_valid_orders_without_returns
   sto_orders_without_returns.each { |order| puts order }
+  p sto_orders_without_returns.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -115,6 +122,7 @@ def process_valid_orders_with_returns_at_shipment_level
   puts 'Processing valid orders with returns at shipment level...'
   valid_orders = WriteFilteredData.get_valid_forward_orders_with_returns(true)
   valid_orders.each { |order| puts order }
+  p valid_orders.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -122,6 +130,7 @@ def process_orders_with_wrong_barcode_location_with_returns_at_shipment_level
   puts 'Processing orders with barcode in different location with returns at shipment level...'
   sto_orders = WriteFilteredData.get_orders_with_wrong_barcode_location_with_returns(true)
   sto_orders.each { |order| puts order }
+  p sto_orders.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -129,6 +138,7 @@ def process_valid_orders_without_returns_at_shipment_level
   puts 'Processing valid orders without returns at shipment level...'
   valid_orders_without_returns = WriteFilteredData.get_orders_without_returns_at_right_location(true)
   valid_orders_without_returns.each { |order| puts order }
+  p valid_orders_without_returns.size
   puts '------------------------------------------------------------------------------'
 end
 
@@ -136,6 +146,15 @@ def process_partial_valid_orders_without_returns_at_shipment_level
   puts 'Processing partial valid orders without returns at shipment level...'
   sto_orders_without_returns = WriteFilteredData.get_partial_valid_orders_without_returns(true)
   sto_orders_without_returns.each { |order| puts order }
+  p sto_orders_without_returns.size
+  puts '------------------------------------------------------------------------------'
+end
+
+def find_partially_completed_orders
+  p 'Finding partially completed orders...'
+  partially_completed_orders = WriteFilteredData.get_partially_completed_orders
+  partially_completed_orders.each { |order| puts order }
+  p partially_completed_orders.size
   puts '------------------------------------------------------------------------------'
 end
 
