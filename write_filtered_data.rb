@@ -9,8 +9,8 @@ require_relative 'const'
 
 class WriteFilteredData
 
-    @project_root = Const::PROJECT_ROOT
-    @result_direct = Const::RESULT_DIRECT
+  @project_root = Const::PROJECT_ROOT
+  @result_direct = Const::RESULT_DIRECT
 
   class << self
 
@@ -56,9 +56,11 @@ class WriteFilteredData
       invalid_orders_data = []
       invalid_orders = InvalidOrderFilters.get_orders_with_multiple_barcodes(with_returns)
       ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+        completed_shipments = OrderShipmentData.shipment_data_by_parent_order_code[forward_shipment.parent_order_id]
         forward_shipment.shipment_lines.each do |shipment_line|
           barcode_location = BarcodeLocation.find_by_barcode(shipment_line.barcode)
           if invalid_orders and invalid_orders.include?(forward_shipment.parent_order_id)
+            next if completed_shipments.include? shipment_line.shipment_id
             invalid_orders_data << {
               fulfilment_location: shipment_line.fulfilment_location,
               parent_order_code: forward_shipment.parent_order_id,
@@ -216,7 +218,56 @@ class WriteFilteredData
         end
       end
 
-      write_orders_to_text_file(partial_valid_orders, "#{@result_direct}needs_sto/partial_valid_orders_without_returns.csv")
+      file_name = "#{@result_direct}needs_sto/partial_valid_orders_without_returns#{'(shipment_level)' if is_shipment_level}.csv"
+      write_orders_to_text_file(partial_valid_orders, file_name)
+      partial_valid_orders
+    end
+
+    def get_partially_completed_orders(is_shipment_level = true)
+      partial_valid_orders = []
+
+      ForwardShipment.forward_shipments_by_parent_id.each_value do |forward_shipment|
+        # shipments: either boolean or array of shipment_ids, depending on is_shipment_level
+        shipments = ValidOrderFilters.incomplete_order_shipments(forward_shipment, is_shipment_level)
+        next unless shipments
+
+        forward_shipment.shipment_lines.each do |shipment_line|
+          if forward_shipment.parent_order_id == 'KO206755'
+            p 'KO206755'
+          end
+
+          next if shipment_line.barcode.nil?
+
+          # If is_shipment_level is true, only process lines whose shipment_id is in shipments
+          if is_shipment_level
+            next unless shipments.keys.include?([shipment_line.shipment_id.to_s, shipment_line.sku])
+          end
+
+          barcode_location = BarcodeLocation.find_by_barcode(shipment_line.barcode)
+
+          # Push the record into partial_valid_orders
+          barcodes = OrderShipmentData.find_barcodes_by_shipment_and_sku(shipment_line.shipment_id, shipment_line.sku)
+          unless barcodes.include?(shipment_line.barcode)
+
+            partial_valid_orders << {
+              fulfilment_location: shipment_line.fulfilment_location,
+              parent_order_code: forward_shipment.parent_order_id,
+              shipment_id: shipment_line.shipment_id,
+              sku: shipment_line.sku,
+              barcode: shipment_line.barcode,
+              barcode_location: if barcode_location
+                                  barcode_location.size > 1 ? "barcode in multiple location" : barcode_location.first.location
+                                else
+                                  nil
+                                end,
+              quantity: barcode_location ? barcode_location.first.quantity : 0
+            }
+          end
+        end
+      end
+
+      # Write to CSV (or any file)
+      write_orders_to_text_file(partial_valid_orders, "#{@result_direct}partially_completed_orders.csv")
       partial_valid_orders
     end
 
