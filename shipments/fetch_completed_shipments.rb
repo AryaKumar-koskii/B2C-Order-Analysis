@@ -14,17 +14,19 @@ class FetchCompletedShipments
     parsed_data = JSON.parse(completed_shipments)
 
     # Extract the `data` array from the response
-    shipment_data = parsed_data['data'] || []
+    order_data = parsed_data['data'] || []
 
     # Write to CSV
     CSV.open("#{Const::PROJECT_ROOT}/csv_files/support_data/completed_shipments.csv", 'w') do |csv|
       # Add headers
-      csv << %w[external_parent_order_code external_shipment_id state]
+      csv << %w[external_parent_order_code sku barcode external_shipment_id state]
 
       # Write each shipment data
-      shipment_data.each do |shipment|
+      order_data.each do |shipment|
         csv << [
           shipment['external_parent_order_code'],
+          shipment['sku'],
+          shipment['barcode']&.to_s&.upcase,
           shipment['external_shipment_id'],
           shipment['state']
         ]

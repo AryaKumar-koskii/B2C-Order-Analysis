@@ -28,7 +28,7 @@ class ForwardShipment
         parent_order_id = row['Parent Order ID']
         shipment_id = row['Shipment ID'].to_s
 
-        completed_shipments = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(parent_order_id)
+        completed_shipments = OrderShipmentData.find_shipments_by_parent_order_code(parent_order_id)
         if completed_shipments&.include?(shipment_id)
           next
         end
