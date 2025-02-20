@@ -29,7 +29,7 @@ class FileMerger
     # output_file = File.join(project_root, 'temp/merged', 'SFS_outward.csv')
 
     required_columns = ['Channel ID', 'SFS/USP Order Status']
-    filter_conditions = ->(row) { !(customisation_skus.include?(row['Client SKU ID'])) && ['PACKED', 'COMPLETED', 'PICKING_COMPLETED'].include?(row['SFS/USP Order Status']) }
+    filter_conditions = ->(row) { !(customisation_skus.include?(row['Client SKU ID'])) && ['COMPLETED'].include?(row['SFS/USP Order Status']) }
 
     process_csv_files(input_directory, output_file, required_columns, filter_conditions)
   end
@@ -79,7 +79,7 @@ class FileMerger
     ]
 
     merged_df = (df1 + df2).map { |row| row.slice(*columns_to_keep) }.uniq
-    merged_df.reject! { |row| row['Channel Order ID'].nil? || row['Shipment ID'].nil? }
+    merged_df.reject! { |row| row['Channel Order ID'].nil? || row['Shipment ID'].nil? || (row['Sales Channel'] == 'KOSKIISTW')}
 
     merged_df.each do |row|
       if row['Parent Order ID'].nil? || row['Parent Order ID'].empty?
