@@ -14,11 +14,13 @@ class ValidOrderFilters
 
       next if invalid_shipment.include?(shipment_line.shipment_id)
 
-      is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+      is_shipment_done = OrderShipmentData.find_shipments_by_parent_order_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)
-        invalid_shipment << shipment_line.shipment_id
-        next if is_shipment_level
-        return false
+        if OrderShipmentData.find_barcodes_by_shipment_and_sku(shipment_line.shipment_id, shipment_line.sku)
+          invalid_shipment << shipment_line.shipment_id
+          next if is_shipment_level
+          return false
+        end
       end
 
       # Condition 1: Check for return shipments using parent_order_id, SKU, and barcode
@@ -72,7 +74,7 @@ class ValidOrderFilters
     return true unless is_shipment_level
     return false if valid_shipments.empty?
 
-    valid_shipments-invalid_shipment.to_a
+    valid_shipments - invalid_shipment.to_a
   end
 
   def self.partial_valid_shipment?(forward_shipment, is_shipment_level = false)
@@ -82,7 +84,7 @@ class ValidOrderFilters
 
       next if invalid_shipment.include?(shipment_line.shipment_id)
 
-      is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+      is_shipment_done = OrderShipmentData.find_shipments_by_parent_order_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)
         invalid_shipment << shipment_line.shipment_id
         next if is_shipment_level
@@ -151,7 +153,7 @@ class ValidOrderFilters
     return true unless is_shipment_level
     return false if valid_shipments.empty?
 
-    valid_shipments-invalid_shipment.to_a
+    valid_shipments - invalid_shipment.to_a
   end
 
   def self.partial_valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
@@ -170,7 +172,7 @@ class ValidOrderFilters
         return false
       end
 
-      is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+      is_shipment_done = OrderShipmentData.find_shipments_by_parent_order_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)
         invalid_shipment << shipment_line.shipment_id
         next if is_shipment_level
@@ -214,7 +216,7 @@ class ValidOrderFilters
     return true unless is_shipment_level
     return false if valid_shipments.empty?
 
-    valid_shipments-invalid_shipment.to_a
+    valid_shipments - invalid_shipment.to_a
   end
 
   def self.valid_shipment_without_returns?(forward_shipment, is_shipment_level = false)
@@ -231,7 +233,7 @@ class ValidOrderFilters
         return false
       end
 
-      is_shipment_done = OrderShipmentData.find_by_parent_order_coder_and_shipment_code(forward_shipment.parent_order_id)
+      is_shipment_done = OrderShipmentData.find_shipments_by_parent_order_code(forward_shipment.parent_order_id)
       if is_shipment_done.include?(shipment_line.shipment_id)
         invalid_shipment << shipment_line.shipment_id
         next if is_shipment_level
@@ -258,7 +260,47 @@ class ValidOrderFilters
     return true unless is_shipment_level
     return false if valid_shipments.empty?
 
-    valid_shipments-invalid_shipment.to_a
+    valid_shipments - invalid_shipment.to_a
+  end
+
+  def self.incomplete_order_shipments(forward_shipment, is_shipment_level = true)
+    valid_shipments = Hash.new { |hash, key| hash[key] = [] }
+    invalid_shipment = Set.new
+    ignore_orders = %w[KO203749 KO207049 KO209814 KO215337 KO216554 29c46727-11e6-4eb7-a1d1-461e9200d4b3 KO212134 c32150f7-7f27-4994-990b-6444f4c1fcca 106de7f1-4776-4276-a463-41718912ac6c KO234218 KUS5867 KUS5656 KUS5666 KUS5913 KUS5727 KUS6020 KUS5994 KUS5863 1cdb4374-24da-42ba-bae9-b7472030ec17 KO206255 16b50037-cdca-4185-9f8b-7655f36551b1 KO227165 c5311dbb-acb1-4db4-9da8-fa1bd6147d62 KO222877 KO216986 KO220851 KO221620 KO205891 KO215646 KO220263 KO221297 KO223107 KO205285 dd1bab1a-9b01-4377-8c3d-0eeac6937086 KO202542 KO202661 0ba02e37-ffbd-4428-ad6f-14cc1de49ef2 6730bf9b-d774-4944-a7f7-bd174d70b121 683e7c7c-af94-4e7d-9174-aa227bde867e]
+    forward_shipment.shipment_lines.each do |shipment_line|
+
+      if ignore_orders.include?(forward_shipment.parent_order_id)
+        return false
+      end
+
+      # next if invalid_shipment.include?(shipment_line.shipment_id)
+
+      is_shipment_done = OrderShipmentData.find_shipments_by_parent_order_code(forward_shipment.parent_order_id)
+      unless is_shipment_done.include?(shipment_line.shipment_id)
+        invalid_shipment << shipment_line.shipment_id
+        next if is_shipment_level
+        return false
+      end
+
+
+      if is_shipment_done.include?(shipment_line.shipment_id)
+        barcodes = OrderShipmentData.find_barcodes_by_shipment_and_sku(shipment_line.shipment_id, shipment_line.sku)
+        barcodes.concat(OrderShipmentData.find_barcodes_by_shipment_and_sku("#{ shipment_line.shipment_id }-1", shipment_line.sku))
+        if barcodes.include?(shipment_line.barcode)
+          invalid_shipment << shipment_line.shipment_id
+          next if is_shipment_level
+          return false
+        end
+      end
+
+      key = [shipment_line.shipment_id, shipment_line.sku]
+      valid_shipments[key] << shipment_line.barcode
+
+    end
+    return true unless is_shipment_level
+    return false if valid_shipments.empty?
+
+    valid_shipments
   end
 
   def self.get_valid_barcode_location(shipment_line)
