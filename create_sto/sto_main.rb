@@ -43,7 +43,7 @@ def construct_payload(from_loc, to_loc, sto_records, order_code)
     "params": {
       "args": {
         "location_code": from_loc.location_code.to_i,
-        "partner_code": to_loc.location_code.to_i,
+        "partner_code": to_loc.location_code,
         "order_code": order_code,
         "order_time": Time.now.to_date,
         "qc_status": "PASS",
@@ -59,7 +59,7 @@ def load_file
   Location.load_locations('../csv_files/support_data/location_alias_mapping.csv')
 
   p 'loading file to create STO'
-  ReadSTOFile.read_from_csv('../test_results/partial_availability_orders.csv')
+  ReadSTOFile.read_from_csv('../temp/sale_dependent_on_stock_issue_sto.csv')
 end
 
 def write_successful_stos_to_csv(sto_records, csv_file_path, response)
@@ -92,7 +92,7 @@ def main
     load_file
 
     ReadSTOFile.sto_records_by_from_to.each do |(from_loc, to_loc), sto_records|
-      order_code = "SO_#{Time.now.to_datetime}_#{Location.find_by_full_name(from_loc).location_code.to_i}_#{ Location.find_by_full_name(to_loc).location_code.to_i}-STO"
+      order_code = "SO_#{Time.now.to_datetime}_#{Location.find_by_full_name(from_loc).location_code.to_i}_#{ Location.find_by_full_name(to_loc).location_code}-STO"
       if from_loc != to_loc
         payload = construct_payload(Location.find_by_full_name(from_loc), Location.find_by_full_name(to_loc), sto_records, order_code)
         puts "Sending payload for from_loc: #{from_loc}, to_loc: #{to_loc}"
